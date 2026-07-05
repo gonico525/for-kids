@@ -104,6 +104,7 @@
   #stage{flex:1 1 auto;position:relative;display:flex;align-items:center;justify-content:center;padding:2px 10px 6px;min-height:0;}
   #box{
     position:relative;border-radius:14px;
+    max-width:100%;max-height:100%;
     background:
       repeating-linear-gradient(92deg, rgba(255,255,255,.05) 0 3px, transparent 3px 17px),
       linear-gradient(180deg, var(--wood-light), var(--wood-mid) 55%, var(--wood-dark));
@@ -199,6 +200,8 @@
     justify-content:center;align-items:center;
     gap:6px;flex-wrap:wrap;
     padding:4px 10px 10px;
+    /* 中身が入れ替わってもステージの高さが揺れないよう1行ぶん確保 */
+    min-height:calc(clamp(34px,5.4vh,44px) + 14px);
   }
   .num{
     font-family:inherit;font-weight:800;
@@ -688,6 +691,11 @@
 
   window.addEventListener('resize',computeLayout);
   window.addEventListener('orientationchange',()=>setTimeout(computeLayout,150));
+  // 問題バーや回答パッドの表示・行数が変わるとステージの空きも変わるので、
+  // ステージの実寸に追従して枠を測りなおす（パッド生成後のはみ出し対策）
+  if('ResizeObserver' in window){
+    new ResizeObserver(()=>computeLayout()).observe(stage);
+  }
 
   computeLayout();
   setTotalFree(20);
