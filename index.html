@@ -57,8 +57,10 @@
   }
   .rule-row {
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    font-size: 30px;
+    font-size: 30px; padding: 8px; border-radius: 14px;
   }
+  .rule-row.ok { background: #E4F6E6; }
+  .rule-row.ng { background: #FFECE8; }
   .rule-row .verdict { font-size: 34px; }
   .rule-note { font-size: 12px; color: #777; line-height: 1.7; }
   .level-label { font-size: 14px; font-weight: 800; color: #2E7D32; }
@@ -82,7 +84,10 @@
     box-shadow: 0 3px 0 rgba(0,0,0,0.08);
   }
   .hud .star-count { font-size: 24px; font-weight: 900; color: #E8A200; }
-  .hud .rule-mini { font-size: 16px; }
+  .rule-mini { display: flex; gap: 6px; }
+  .chip { border-radius: 999px; padding: 4px 10px; font-size: 16px; }
+  .chip-ok { background: #E4F6E6; }
+  .chip-ng { background: #FFECE8; }
   .timebar-track {
     height: 14px; background: rgba(255,255,255,0.6); border-radius: 999px; overflow: hidden;
   }
@@ -128,10 +133,6 @@
     position: absolute; inset: 0; z-index: 3;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
     background: rgba(0,0,0,0.3); border-radius: 24px;
-  }
-  .cd-rule {
-    background: var(--card); border-radius: 999px; padding: 10px 20px;
-    font-size: 22px; box-shadow: 0 3px 0 rgba(0,0,0,0.15);
   }
   .cd-num {
     font-size: 88px; font-weight: 900; color: #fff; line-height: 1.2;
@@ -220,7 +221,7 @@
     .tickets-box .balloons { font-size: 24px; }
     .sound-toggle { font-size: 34px; }
     .hud .star-count { font-size: 30px; }
-    .hud .rule-mini { font-size: 20px; }
+    .chip { font-size: 20px; }
     .hole-btn { min-height: 130px; }
     .hole-btn .char { font-size: 68px; margin-bottom: 24px; }
     .hole-btn .hit { font-size: 56px; }
@@ -282,8 +283,6 @@
     #oyasumi { gap: 12px; padding: 16px; }
     .cd-num { font-size: 56px; }
     .cd-num.go { font-size: 34px; }
-    .cd-rule { font-size: 18px; padding: 6px 14px; }
-    .countdown { gap: 8px; }
   }
 </style>
 </head>
@@ -299,8 +298,8 @@
     </div>
     <div class="tickets-box">きょうは あと <span class="balloons" id="tickets">🎈🎈🎈</span></div>
     <div class="rule-card">
-      <div class="rule-row"><span id="rule-good">🐰 🐶 🐱 🐥</span> → <span class="verdict">👆⭕</span></div>
-      <div class="rule-row"><span id="rule-bad">🐝 👻 🐺</span> → <span class="verdict">✋❌</span></div>
+      <div class="rule-row ok"><span id="rule-good">🐰 🐶 🐱 🐥</span> → <span class="verdict">👆⭕</span></div>
+      <div class="rule-row ng"><span id="rule-bad">🐝 👻 🐺</span> → <span class="verdict">✋❌</span></div>
       <div class="rule-note">
         でてきた「おともだち」をタッチ!<br>
         ハチとおばけは さわっちゃダメ!<br>
@@ -326,13 +325,15 @@
   <section id="game" class="screen">
     <div class="hud">
       <div class="star-count" id="star-count">⭐ 0</div>
-      <div class="rule-mini" id="rule-mini">🐰🐶🐱🐥⭕ 🐝👻❌</div>
+      <div class="rule-mini">
+        <span class="chip chip-ok" id="rule-ok">🐰🐶🐱🐥⭕</span>
+        <span class="chip chip-ng" id="rule-ng">🐝👻❌</span>
+      </div>
     </div>
     <div class="timebar-track"><div class="timebar" id="timebar"></div></div>
     <div class="field-wrap">
       <div class="field" id="field"></div>
       <div class="countdown hidden" id="countdown">
-        <div class="cd-rule" id="cd-rule"></div>
         <div class="cd-num" id="cd-num"></div>
       </div>
     </div>
@@ -589,7 +590,6 @@
 
   function runCountdown(done) {
     const cd = $('countdown'), num = $('cd-num');
-    $('cd-rule').textContent = state.cfg.good.join('') + '⭕ ' + state.cfg.bad.join('') + '❌';
     cd.classList.remove('hidden');
     const seq = ['3', '2', '1', 'スタート!'];
     let i = 0;
@@ -614,8 +614,8 @@
     state = newState(levelKey);
     buildField();
     updateStars();
-    $('rule-mini').textContent =
-      state.cfg.good.join('') + '⭕ ' + state.cfg.bad.join('') + '❌';
+    $('rule-ok').textContent = state.cfg.good.join('') + '⭕';
+    $('rule-ng').textContent = state.cfg.bad.join('') + '❌';
     $('timebar').style.transform = 'scaleX(1)';
     show('game');
     runCountdown(() => {
