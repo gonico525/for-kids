@@ -37,6 +37,7 @@
     display: flex; justify-content: center;
   }
   #app {
+    position: relative;
     width: 100%; max-width: 430px; min-height: 100dvh;
     display: flex; flex-direction: column;
     padding: calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
@@ -188,6 +189,80 @@
   .limit-ctrl span { font-size: 22px; font-weight: 900; }
   .restore { background: #FFF3C6; border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 800; color: #8A6D00; }
   .hidden { display: none !important; }
+
+  /* ---------- タブレット(縦横共通: 大きめに表示) ---------- */
+  @media (min-width: 600px) and (min-height: 500px) {
+    #app { max-width: 560px; }
+    .title { font-size: 44px; }
+    .subtitle { font-size: 14px; }
+    .rule-note { font-size: 14px; }
+    .level-btn { font-size: 30px; padding: 20px; }
+    .level-btn .lb-best { font-size: 16px; }
+    .tickets-box { font-size: 17px; }
+    .tickets-box .balloons { font-size: 24px; }
+    .sound-toggle { font-size: 34px; }
+    .hud .star-count { font-size: 30px; }
+    .hud .rule-mini { font-size: 20px; }
+    .hole-btn { min-height: 130px; }
+    .hole-btn .char { font-size: 68px; margin-bottom: 24px; }
+    .hole-btn .hit { font-size: 56px; }
+    .hole-btn::after { height: 40px; }
+    .medal { font-size: 120px; }
+    .result-stars { font-size: 56px; }
+    .cheer { font-size: 30px; }
+    .icon-btn { width: 100px; height: 100px; font-size: 48px; }
+    .oyasumi-text { font-size: 26px; }
+  }
+
+  /* ---------- 横画面: 幅を広げて2カラム/3列レイアウト ---------- */
+  @media (orientation: landscape) and (min-width: 640px) {
+    #app { max-width: 900px; }
+    .field { grid-template-columns: repeat(3, 1fr); }
+    #start.active {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "head    head"
+        "tickets label"
+        "rule    levels"
+        "rule    gear";
+      gap: 12px 24px;
+      align-content: center;
+    }
+    .start-head { grid-area: head; }
+    #start .tickets-box { grid-area: tickets; justify-self: center; align-self: center; }
+    #start .rule-card { grid-area: rule; align-self: center; justify-content: center; }
+    #start .level-label { grid-area: label; align-self: end; text-align: center; }
+    #start .levels { grid-area: levels; align-self: center; }
+    #start .gear-btn { grid-area: gear; justify-self: center; }
+    #start .level-btn { font-size: 26px; }
+  }
+
+  /* ---------- 横画面で高さが低い場合(スマホ横持ちなど): 詰めて収める ---------- */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #app { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+    #game { gap: 6px; }
+    .field { padding: 10px; gap: 8px; grid-template-columns: repeat(3, 1fr); }
+    .hole-btn { min-height: 64px; }
+    .hole-btn .char { font-size: 44px; margin-bottom: 12px; }
+    .hole-btn .hit { font-size: 36px; }
+    .hole-btn::after { height: 22px; bottom: 6px; }
+    .hud { padding: 6px 14px; }
+    .hud .star-count { font-size: 20px; }
+    .timebar-track { height: 10px; }
+    #start.active, #result.active { gap: 10px; }
+    .title { font-size: 28px; }
+    .rule-card { padding: 10px; gap: 6px; }
+    .rule-row { font-size: 24px; }
+    .rule-row .verdict { font-size: 28px; }
+    .level-btn { padding: 10px 16px; font-size: 22px; }
+    .medal { font-size: 64px; }
+    .result-stars { font-size: 34px; }
+    .icon-btn { width: 64px; height: 64px; font-size: 30px; }
+    .moon { font-size: 56px; }
+    .oyasumi-text { font-size: 18px; }
+    #oyasumi { gap: 12px; padding: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -196,7 +271,7 @@
 
   <!-- スタート -->
   <section id="start" class="screen active">
-    <div>
+    <div class="start-head">
       <div class="title">ぴょこっとタッチ</div>
       <div class="subtitle">4〜6さい向け とっさのはんだんゲーム(おうちのかたへ: 文字が読めなくても遊べます)</div>
     </div>
