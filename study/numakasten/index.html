@@ -17,6 +17,7 @@
     --paper:#fbf6ea;
     --accent:#c95f4b;
     --good:#4e8f5a;
+    --numsize:clamp(44px,7.5vh,58px); /* 数字ボタンの大きさ(パッドの寸法計算と共有) */
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;overflow:hidden;}
@@ -88,7 +89,7 @@
     flex:0 0 auto;display:none;justify-content:center;padding:2px 10px 4px;
   }
   #qtext{
-    font-weight:800;font-size:clamp(15px,2.6vh,20px);
+    font-weight:800;font-size:clamp(18px,3.4vh,26px);
     background:var(--paper);
     border:2px solid var(--wood-mid);
     border-radius:14px;
@@ -97,11 +98,15 @@
     text-align:center;
     transition:background .2s,color .2s;
   }
+  /* 問題文中の数字は課題の入力なので大きく・色を変えて目立たせる */
+  #qtext .qnum{font-size:1.3em;color:var(--accent);padding:0 2px;}
   #qtext.good{background:var(--good);border-color:#39693f;box-shadow:0 2px 0 #39693f;color:#fff;}
   #qtext.oops{background:#e5b45c;border-color:#b58a3a;box-shadow:0 2px 0 #b58a3a;}
+  #qtext.oops .qnum{color:#8c2f1d;}
 
   /* ---------- stage ---------- */
-  #stage{flex:1 1 auto;position:relative;display:flex;align-items:center;justify-content:center;padding:2px 10px 6px;min-height:0;}
+  #main{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;min-width:0;}
+  #stage{flex:1 1 auto;position:relative;display:flex;align-items:center;justify-content:center;padding:2px 10px 6px;min-height:0;min-width:0;}
   #box{
     position:relative;border-radius:14px;
     max-width:100%;max-height:100%;
@@ -186,13 +191,29 @@
   .count{
     position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
     background:rgba(74,52,35,.85);color:#fff;
-    font-weight:800;font-size:16px;
-    min-width:44px;text-align:center;
+    font-weight:800;font-size:18px;
+    min-width:48px;text-align:center;
     padding:2px 12px;border-radius:999px;
     z-index:6;pointer-events:none;
     transition:opacity .2s;
   }
   .count.off{opacity:0;}
+
+  /* ---------- ⭕❌スタンプ ---------- */
+  #stamp{
+    position:absolute;inset:0;z-index:20;
+    display:flex;align-items:center;justify-content:center;
+    font-size:min(34vh,160px);
+    pointer-events:none;opacity:0;
+  }
+  #stamp.show{animation:stampPop 1.2s ease-out forwards;}
+  @keyframes stampPop{
+    0%{opacity:0;transform:scale(.3);}
+    22%{opacity:1;transform:scale(1.15);}
+    40%{transform:scale(1);}
+    70%{opacity:1;}
+    100%{opacity:0;transform:scale(1);}
+  }
 
   /* ---------- answer pad ---------- */
   #pad{
@@ -201,12 +222,12 @@
     gap:6px;flex-wrap:wrap;
     padding:4px 10px 10px;
     /* 中身が入れ替わってもステージの高さが揺れないよう1行ぶん確保 */
-    min-height:calc(clamp(34px,5.4vh,44px) + 14px);
+    min-height:calc(var(--numsize) + 14px);
   }
   .num{
     font-family:inherit;font-weight:800;
-    font-size:clamp(14px,2.4vh,18px);
-    width:clamp(34px,5.4vh,44px);height:clamp(34px,5.4vh,44px);
+    font-size:clamp(20px,3.4vh,26px);
+    width:var(--numsize);height:var(--numsize);
     border-radius:50%;
     border:2px solid var(--wood-mid);
     background:var(--paper);color:var(--ink);
@@ -217,8 +238,8 @@
   .num:disabled{opacity:.45;}
   .choice{
     font-family:inherit;font-weight:800;
-    font-size:clamp(14px,2.4vh,17px);
-    padding:8px 22px;border-radius:999px;
+    font-size:clamp(16px,2.8vh,20px);
+    padding:8px 24px;border-radius:999px;
     border:2px solid var(--wood-mid);
     background:var(--paper);color:var(--ink);
     box-shadow:0 2px 0 var(--wood-mid);
@@ -226,13 +247,30 @@
   }
   .choice:active{transform:translateY(2px);box-shadow:0 0 0 var(--wood-mid);}
   #doneBtn,#nextBtn{
-    font-family:inherit;font-weight:800;font-size:16px;
-    padding:8px 26px;border-radius:999px;cursor:pointer;
+    font-family:inherit;font-weight:800;font-size:18px;
+    padding:8px 28px;border-radius:999px;cursor:pointer;
     border:2px solid #39693f;background:var(--good);color:#fff;
     box-shadow:0 3px 0 #39693f;
   }
   #doneBtn:active,#nextBtn:active{transform:translateY(3px);box-shadow:0 0 0 #39693f;}
   #nextBtn{background:var(--accent);border-color:#a04836;box-shadow:0 3px 0 #a04836;}
+
+  /* ---------- 回答パッドを右の余白へ(横向きの短い画面・幅800px以上のみ) ----------
+     箱は横長比率固定で高さが先に尽きるため、下にパッドを置くと箱が縮む。
+     幅800px未満(iPhone SE級)はパネルを置くほうが箱が縮むので下配置のまま。 */
+  @media (orientation:landscape) and (max-height:500px) and (min-width:800px){
+    #main{flex-direction:row;}
+    #pad{
+      /* 1段5個=箱の「5のまとまり」と同じ構造で折り返す幅 */
+      flex:0 0 auto;
+      width:calc(var(--numsize)*5 + 4*6px + 24px);
+      min-height:0;height:auto;
+      align-content:center;
+      padding:8px 8px 8px 0;
+    }
+    /* ひだり/おなじ/みぎ は縦に1個ずつ(中途半端な折り返しを防ぐ) */
+    #pad .choice{flex:0 0 100%;}
+  }
 
   /* ---------- rotate hint ---------- */
   #rotateHint{
@@ -253,6 +291,14 @@
     .ball.bounce{animation:none;}
     .cover{transition:none;}
     #rotateHint .phone{animation:none;}
+    /* スタンプは拡大せずフェードだけにする */
+    #stamp.show{animation:stampFade 1.2s forwards;}
+  }
+  @keyframes stampFade{
+    0%{opacity:0;}
+    15%{opacity:1;}
+    70%{opacity:1;}
+    100%{opacity:0;}
   }
 </style>
 </head>
@@ -285,23 +331,26 @@
 
 <div id="qbar"><div id="qtext"></div></div>
 
-<div id="stage">
-  <div id="box">
-    <div id="inner">
-      <div class="chamber left" id="chamL">
-        <div class="cover hidden" id="coverL"><span>なんこかな？</span></div>
-        <div class="count off" id="countL">0</div>
-      </div>
-      <div id="divider"></div>
-      <div class="chamber right" id="chamR">
-        <div class="cover hidden" id="coverR"><span>なんこかな？</span></div>
-        <div class="count off" id="countR">0</div>
+<div id="main">
+  <div id="stage">
+    <div id="box">
+      <div id="inner">
+        <div class="chamber left" id="chamL">
+          <div class="cover hidden" id="coverL"><span>なんこかな？</span></div>
+          <div class="count off" id="countL">0</div>
+        </div>
+        <div id="divider"></div>
+        <div class="chamber right" id="chamR">
+          <div class="cover hidden" id="coverR"><span>なんこかな？</span></div>
+          <div class="count off" id="countR">0</div>
+        </div>
       </div>
     </div>
+    <div id="stamp"></div>
   </div>
-</div>
 
-<div id="pad"></div>
+  <div id="pad"></div>
+</div>
 
 <div id="rotateHint" class="active">
   <div class="phone">📱</div>
@@ -317,7 +366,7 @@
   const inner=$('inner'), box=$('box'), stage=$('stage'), divider=$('divider');
   const countL=$('countL'), countR=$('countR');
   const coverL=$('coverL'), coverR=$('coverR');
-  const qbar=$('qbar'), qtext=$('qtext'), pad=$('pad');
+  const qbar=$('qbar'), qtext=$('qtext'), pad=$('pad'), stamp=$('stamp');
 
   let total = 20;
   let balls = [];     // [{el, side}]
@@ -326,7 +375,7 @@
   /* ================= sound(shared/sound.js の KidsSound。ON/OFFは全アプリ共通) ================= */
   const sClick =()=>{ KidsSound.tone(620+Math.random()*160,0.09,0.12,'triangle'); };
   const sGood  =()=>{ KidsSound.tone(660,0.12,0.14,'sine'); KidsSound.tone(880,0.18,0.14,'sine',0.1); KidsSound.tone(1320,0.22,0.10,'sine',0.2); };
-  const sOops  =()=>{ KidsSound.tone(240,0.25,0.10,'sine'); };
+  const sOops  =()=>{ KidsSound.tone(300,0.18,0.12,'sine'); KidsSound.tone(220,0.30,0.12,'sine',0.15); }; // 「ぶっぶー」と下がる2音で正解音と区別
   const soundBtn=$('soundBtn');
   function renderSound(){ soundBtn.textContent = KidsSound.enabled() ? '🔊' : '🔇'; }
   soundBtn.onclick=()=>{
@@ -472,6 +521,14 @@
 
   function setStreak(n){ Q.streak=n; $('streak').textContent='⭐ '+n; }
 
+  // 問題文の中で本当に必要な数字だけ大きく強調して出す
+  const N=n=>`<b class="qnum">${n}</b>`;
+  function showStamp(ch){
+    stamp.textContent=ch;
+    stamp.classList.remove('show'); void stamp.offsetWidth;
+    stamp.classList.add('show');
+  }
+
   function buildNumPad(max){
     pad.innerHTML='';
     for(let i=0;i<=max;i++){
@@ -509,6 +566,7 @@
   function newQuestion(){
     Q.qid++;
     qtext.className='';
+    stamp.classList.remove('show');
     setCover('L',false); setCover('R',false);
     countL.classList.add('off'); countR.classList.add('off');
 
@@ -523,7 +581,7 @@
       const tot={1:5,2:10,4:20}[Q.level];
       Q.ans=n;
       setSplit(0,tot);
-      qtext.textContent=`ひだりの へやに ${n}こ いれよう`;
+      qtext.innerHTML=`ひだりに ${N(n)}こ いれよう`;
       buildDonePad();
     }
     else if(type==='tsukurouS'){
@@ -532,7 +590,7 @@
       // 最初はぐちゃっと（答えと違う並びで）
       let l0; do{ l0=rnd(0,10); }while(l0===a);
       setSplit(l0,10-l0);
-      qtext.textContent=`ひだりに ${a}こ、みぎに ${b}こ に わけよう`;
+      qtext.innerHTML=`ひだり ${N(a)}こ と みぎ ${N(b)}こ に わけよう`;
       buildDonePad();
     }
     else if(type==='kakurenbo' || type==='kakurenbo10'){
@@ -543,7 +601,8 @@
       Q.ans=hide;
       if(hideSide==='L') setSplit(hide,show); else setSplit(show,hide);
       setCover(hideSide,true);
-      qtext.textContent=`ぜんぶで ${T}こ。かくれているのは なんこ？`;
+      // 「ぜんぶ」は課題の入力なので数字を出す(見える側を数えないと解けない)
+      qtext.innerHTML=`ぜんぶで ${N(T)}こ。かくれてるのは なんこ？`;
       buildNumPad(LV[Q.level].padMax);
     }
     else if(type==='hosuu'){
@@ -551,7 +610,8 @@
       Q.ans=10-a;
       setSplit(a,10-a);
       setCover('R',true);
-      qtext.textContent=`${a}と いくつで 10？`;
+      // ひだりの数は文に出さない(玉を数えさせるため)
+      qtext.innerHTML=`あと いくつで ${N(10)}？`;
       buildNumPad(10);
     }
     else if(type==='keisan'){
@@ -560,14 +620,15 @@
       const a=rnd(1,T-1);
       Q.ans=T;
       setSplit(a,T-a);
-      qtext.textContent=`${a}と ${T-a}で いくつ？`;
+      // 数字を文に出すと玉を見ずに暗算してしまうので出さない
+      qtext.textContent='あわせて なんこ？';
       buildNumPad(LV[Q.level].padMax);
     }
     else if(type==='keisanKuri'){
       const a=rnd(6,9), b=rnd(Math.max(2,11-a),Math.min(9,20-a));
       Q.ans=a+b;
       setSplit(a,b);
-      qtext.textContent=`${a}と ${b}で いくつ？`;
+      qtext.textContent='あわせて なんこ？';
       buildNumPad(20);
     }
     else if(type==='kurabete'){
@@ -578,7 +639,7 @@
       else{ do{ b=rnd(range[0],range[1]); }while(b===a); }
       Q.a=a; Q.b=b; Q.ans=Math.abs(a-b);
       setSplit(a,b);
-      qtext.textContent='ひだりと みぎ、どっちが おおい？';
+      qtext.textContent='どっちが おおい？';
       buildChoicePad();
     }
     else if(type==='flash' || type==='flash10'){
@@ -586,14 +647,14 @@
       const a=rnd(0,T);
       Q.ans=T; Q.phase='watch';
       setSplit(a,T-a);
-      qtext.textContent='よーく みてね…';
+      qtext.textContent='よーく みてね… 👀';
       pad.innerHTML='';
       const myId=Q.qid;
       const dur=1200+T*60;
       setTimeout(()=>{
         if(myId!==Q.qid) return;
         setCover('L',true); setCover('R',true);
-        qtext.textContent='いま なんこ みえた？';
+        qtext.textContent='なんこ みえた？';
         Q.phase='answer';
         buildNumPad(LV[Q.level].padMax);
       }, dur);
@@ -604,6 +665,7 @@
     Q.phase='done';
     qtext.textContent='せいかい！ 🎉';
     qtext.className='good';
+    showStamp('⭕');
     sGood();
     setCover('L',false); setCover('R',false);
     countL.classList.remove('off'); countR.classList.remove('off');
@@ -615,8 +677,9 @@
   }
   function onWrong(msg){
     Q.phase='done';
-    qtext.textContent = msg || `こたえは ${Q.ans} だよ。みてみよう`;
+    qtext.innerHTML = msg || `こたえは ${N(Q.ans)} だよ。みてみよう`;
     qtext.className='oops';
+    showStamp('❌');
     sOops();
     setCover('L',false); setCover('R',false);
     countL.classList.remove('off'); countR.classList.remove('off');
@@ -637,7 +700,7 @@
     if(c!==correct){
       onWrong(Q.a===Q.b
         ? 'おなじ かずだよ。みてみよう'
-        : `${Q.a>Q.b?'ひだり':'みぎ'}が ${Q.ans}こ おおいよ。みてみよう`);
+        : `${Q.a>Q.b?'ひだり':'みぎ'}が ${N(Q.ans)}こ おおいよ。みてみよう`);
       return;
     }
     if(correct==='S'){ onCorrect(); return; }
@@ -655,27 +718,29 @@
 
   /* ---------- mode & level switching ---------- */
   const modeBtn=$('modeBtn');
-  modeBtn.onclick=()=>{
-    Q.active=!Q.active;
-    modeBtn.textContent = Q.active ? '🧸 じゆうあそび' : '✏️ もんだい';
-    modeBtn.classList.toggle('on', Q.active);
-    $('freeCtrls').style.display = Q.active ? 'none' : 'contents';
-    $('quizCtrls').style.display = Q.active ? 'flex' : 'none';
-    qbar.style.display = Q.active ? 'flex' : 'none';
-    pad.style.display  = Q.active ? 'flex' : 'none';
-    if(Q.active){
+  function setMode(active){
+    Q.active=active;
+    modeBtn.textContent = active ? '🧸 じゆうあそび' : '✏️ もんだい';
+    modeBtn.classList.toggle('on', active);
+    $('freeCtrls').style.display = active ? 'none' : 'contents';
+    $('quizCtrls').style.display = active ? 'flex' : 'none';
+    qbar.style.display = active ? 'flex' : 'none';
+    pad.style.display  = active ? 'flex' : 'none';
+    if(active){
       $('numBtn').classList.remove('on');
       requestAnimationFrame(()=>{ computeLayout(); newQuestion(); });
     }else{
       Q.qid++;
       qtext.className='';
+      stamp.classList.remove('show');
       setCover('L',false); setCover('R',false);
       countL.classList.add('off'); countR.classList.add('off');
       $('coverLBtn').classList.remove('on'); $('coverLBtn').textContent='左をかくす';
       $('coverRBtn').classList.remove('on'); $('coverRBtn').textContent='右をかくす';
       requestAnimationFrame(()=>{ computeLayout(); setTotalFree(20); });
     }
-  };
+  }
+  modeBtn.onclick=()=>setMode(!Q.active);
   document.querySelectorAll('.chip').forEach(ch=>{
     ch.onclick=()=>{
       document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
@@ -695,7 +760,7 @@
   }
 
   computeLayout();
-  setTotalFree(20);
+  setMode(true); // 開いたらすぐ「もんだい」から始める(じゆうあそびはボタンで切替)
 })();
 
 // ---------- PWA: Service Worker ----------
