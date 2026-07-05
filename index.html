@@ -103,7 +103,7 @@
   }
   .hole-btn::after {
     content: ''; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-    width: 74%; height: 30px; border-radius: 50%;
+    width: 74%; max-width: 140px; height: 30px; border-radius: 50%;
     background: radial-gradient(ellipse at 50% 40%, var(--hole) 0%, var(--hole-deep) 100%);
   }
   .hole-btn .char {
@@ -206,7 +206,7 @@
     .hole-btn { min-height: 130px; }
     .hole-btn .char { font-size: 68px; margin-bottom: 24px; }
     .hole-btn .hit { font-size: 56px; }
-    .hole-btn::after { height: 40px; }
+    .hole-btn::after { height: 40px; max-width: 185px; }
     .medal { font-size: 120px; }
     .result-stars { font-size: 56px; }
     .cheer { font-size: 30px; }
@@ -246,7 +246,7 @@
     .hole-btn { min-height: 64px; }
     .hole-btn .char { font-size: 44px; margin-bottom: 12px; }
     .hole-btn .hit { font-size: 36px; }
-    .hole-btn::after { height: 22px; bottom: 6px; }
+    .hole-btn::after { height: 22px; bottom: 6px; max-width: 105px; }
     .hud { padding: 6px 14px; }
     .hud .star-count { font-size: 20px; }
     .timebar-track { height: 10px; }
