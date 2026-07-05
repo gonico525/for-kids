@@ -336,6 +336,7 @@
 </div>
 
 <script src="../../shared/tickets.js"></script>
+<script src="../../shared/sound.js"></script>
 <script>
 (() => {
   const LEVELS = {
@@ -351,28 +352,13 @@
   const screens = { start: $('start'), game: $('game'), result: $('result'), oyasumi: $('oyasumi') };
 
   let bests = { l1: 0, l2: 0, l3: 0 };
-  let soundOn = true;
   let state = null;
   let rafId = null;
 
-  // ---------- サウンド(WebAudioで生成、素材不要) ----------
-  let ac = null;
-  function ensureAudio() {
-    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-    if (ac && ac.state === 'suspended') ac.resume();
-  }
-  function tone(freq, dur, type, vol, when) {
-    if (!soundOn || !ac) return;
-    const o = ac.createOscillator(), g = ac.createGain();
-    o.type = type; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, ac.currentTime + when);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + when + dur);
-    o.connect(g); g.connect(ac.destination);
-    o.start(ac.currentTime + when); o.stop(ac.currentTime + when + dur);
-  }
-  const sndGood = () => { tone(660, 0.12, 'sine', 0.2, 0); tone(990, 0.15, 'sine', 0.2, 0.09); };
-  const sndBad  = () => { tone(160, 0.25, 'square', 0.12, 0); };
-  const sndEnd  = () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.2, 'sine', 0.2, i * 0.15)); };
+  // ---------- サウンド(shared/sound.js の KidsSound を使用。ON/OFFは全アプリ共通) ----------
+  const sndGood = () => { KidsSound.tone(660, 0.12, 0.2, 'sine'); KidsSound.tone(990, 0.15, 0.2, 'sine', 0.09); };
+  const sndBad  = () => { KidsSound.tone(160, 0.25, 0.12, 'square'); };
+  const sndEnd  = () => { [523, 659, 784, 1047].forEach((f, i) => KidsSound.tone(f, 0.2, 0.2, 'sine', i * 0.15)); };
 
   // ---------- 保存 ----------
   function loadBests() {
@@ -525,7 +511,7 @@
       num.textContent = seq[i];
       num.classList.toggle('go', isGo);
       num.classList.remove('zoom'); void num.offsetWidth; num.classList.add('zoom');
-      tone(isGo ? 880 : 440, isGo ? 0.3 : 0.12, 'sine', 0.2, 0);
+      KidsSound.tone(isGo ? 880 : 440, isGo ? 0.3 : 0.12, 0.2, 'sine');
       i++;
       setTimeout(() => {
         if (i < seq.length) { step(); return; }
@@ -537,7 +523,7 @@
   }
 
   function startRound(levelKey) {
-    ensureAudio();
+    KidsSound.ensure();
     state = newState(levelKey);
     buildField();
     updateStars();
@@ -586,17 +572,22 @@
   $('btn-retry').addEventListener('click', () => tryStart(state.levelKey));
   $('btn-home').addEventListener('click', () => { renderBests(); renderTickets(); show('start'); });
   $('btn-oyasumi-home').addEventListener('click', () => { renderTickets(); show('start'); });
+  function renderSound() {
+    $('btn-sound').textContent = KidsSound.enabled() ? '🔊' : '🔇';
+  }
   $('btn-sound').addEventListener('click', () => {
-    soundOn = !soundOn;
-    $('btn-sound').textContent = soundOn ? '🔊' : '🔇';
+    KidsSound.setEnabled(!KidsSound.enabled());
+    renderSound();
+    if (KidsSound.enabled()) sndGood(); // ONにしたのが音で分かるように
   });
 
-  // ハブから戻ってきたとき(bfcache 復帰含む)に残数を最新化
-  window.addEventListener('pageshow', renderTickets);
+  // ハブから戻ってきたとき(bfcache 復帰含む)に残数・音設定を最新化
+  window.addEventListener('pageshow', () => { renderTickets(); renderSound(); });
 
   buildField();
   loadBests();
   renderTickets();
+  renderSound();
 })();
 
 // ---------- PWA: Service Worker ----------

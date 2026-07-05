@@ -260,6 +260,7 @@
 
 <div id="bar">
   <a class="btn" href="../../" aria-label="えらぶがめんにもどる">🏠</a>
+  <button class="btn" id="soundBtn" aria-label="おとのオンオフ">🔊</button>
   <div id="title">ヌマーカステン</div>
   <button class="btn" id="modeBtn">✏️ もんだい</button>
   <span id="freeCtrls" style="display:contents">
@@ -308,6 +309,7 @@
   <button class="btn" id="dismissHint">このまま使う</button>
 </div>
 
+<script src="../../shared/sound.js"></script>
 <script>
 (function(){
   const COLS = 5, MAX = 20;
@@ -321,24 +323,19 @@
   let balls = [];     // [{el, side}]
   let layout = {};
 
-  /* ================= sound ================= */
-  let actx=null;
-  function tone(freq, dur, gain, type, when){
-    try{
-      actx = actx || new (window.AudioContext||window.webkitAudioContext)();
-      const t = actx.currentTime + (when||0);
-      const o=actx.createOscillator(), g=actx.createGain();
-      o.type=type||'triangle';
-      o.frequency.setValueAtTime(freq,t);
-      g.gain.setValueAtTime(gain,t);
-      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-      o.connect(g);g.connect(actx.destination);
-      o.start(t);o.stop(t+dur+0.02);
-    }catch(e){}
-  }
-  const sClick =()=>{ tone(620+Math.random()*160,0.09,0.12); };
-  const sGood  =()=>{ tone(660,0.12,0.14,'sine'); tone(880,0.18,0.14,'sine',0.1); tone(1320,0.22,0.10,'sine',0.2); };
-  const sOops  =()=>{ tone(240,0.25,0.10,'sine'); };
+  /* ================= sound(shared/sound.js の KidsSound。ON/OFFは全アプリ共通) ================= */
+  const sClick =()=>{ KidsSound.tone(620+Math.random()*160,0.09,0.12,'triangle'); };
+  const sGood  =()=>{ KidsSound.tone(660,0.12,0.14,'sine'); KidsSound.tone(880,0.18,0.14,'sine',0.1); KidsSound.tone(1320,0.22,0.10,'sine',0.2); };
+  const sOops  =()=>{ KidsSound.tone(240,0.25,0.10,'sine'); };
+  const soundBtn=$('soundBtn');
+  function renderSound(){ soundBtn.textContent = KidsSound.enabled() ? '🔊' : '🔇'; }
+  soundBtn.onclick=()=>{
+    KidsSound.setEnabled(!KidsSound.enabled());
+    renderSound();
+    if(KidsSound.enabled()) sGood(); // ONにしたのが音で分かるように
+  };
+  renderSound();
+  window.addEventListener('pageshow',renderSound);
 
   /* ================= geometry ================= */
   function computeLayout(){
