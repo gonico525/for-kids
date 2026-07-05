@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ぴょこっとタッチ — 4〜6さい向け はんだんゲーム</title>
+<link rel="manifest" href="../../manifest.webmanifest">
+<meta name="theme-color" content="#BDE8FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ぴょこっとタッチ">
+<link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
+<style>
+  :root {
+    --sky: #BDE8FF;
+    --sky-deep: #8FD4FF;
+    --grass: #7ED957;
+    --grass-deep: #5CBF3E;
+    --hole: #8A5A33;
+    --hole-deep: #6B4423;
+    --card: #FFFFFF;
+    --ink: #3A3A3A;
+    --sun: #FFD644;
+    --bad: #FF7B6B;
+    --good: #58C471;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body {
+    background: linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 100%);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+    display: flex; justify-content: center;
+  }
+  #app {
+    position: relative;
+    width: 100%; max-width: 430px; min-height: 100dvh;
+    display: flex; flex-direction: column;
+    padding: calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+  }
+  .screen { flex: 1; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+  button { font-family: inherit; border: none; cursor: pointer; background: none; }
+
+  /* ---------- スタート ---------- */
+  #start { justify-content: center; text-align: center; gap: 16px; }
+  .title { font-size: 34px; font-weight: 900; color: #2E7D32; text-shadow: 2px 2px 0 #fff; }
+  .subtitle { font-size: 12px; color: #4E6E58; }
+  .rule-card {
+    background: var(--card); border-radius: 20px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.08);
+  }
+  .rule-row {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 30px; padding: 8px; border-radius: 14px;
+  }
+  .rule-row.ok { background: #E4F6E6; }
+  .rule-row.ng { background: #FFECE8; }
+  .rule-row .verdict { font-size: 34px; }
+  .rule-note { font-size: 12px; color: #777; line-height: 1.7; }
+  .level-label { font-size: 14px; font-weight: 800; color: #2E7D32; }
+  .levels { display: flex; flex-direction: column; gap: 10px; }
+  .level-btn {
+    background: var(--card); border-radius: 20px; padding: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 26px; box-shadow: 0 5px 0 rgba(0,0,0,0.1);
+    transition: transform 0.08s ease;
+  }
+  .level-btn:active { transform: scale(0.96); }
+  .level-btn .stars { letter-spacing: 2px; }
+  .level-btn .lb-best { font-size: 14px; font-weight: 800; color: #E8A200; }
+  .sound-toggle { position: absolute; top: 14px; right: 14px; font-size: 28px; }
+  .back-btn { position: absolute; top: 14px; left: 14px; font-size: 28px; text-decoration: none; }
+
+  /* ---------- ゲーム ---------- */
+  #game { gap: 10px; }
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--card); border-radius: 999px; padding: 8px 16px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+  }
+  .hud .star-count { font-size: 24px; font-weight: 900; color: #E8A200; }
+  .rule-mini { display: flex; gap: 6px; }
+  .chip { border-radius: 999px; padding: 4px 10px; font-size: 16px; }
+  .chip-ok { background: #E4F6E6; }
+  .chip-ng { background: #FFECE8; }
+  .timebar-track {
+    height: 14px; background: rgba(255,255,255,0.6); border-radius: 999px; overflow: hidden;
+  }
+  .timebar {
+    height: 100%; width: 100%; background: var(--sun);
+    transform-origin: left; border-radius: 999px;
+  }
+  .field-wrap { flex: 1; position: relative; display: flex; }
+  .field {
+    flex: 1; background: linear-gradient(180deg, var(--grass) 0%, var(--grass-deep) 100%);
+    border-radius: 24px; padding: 14px;
+    display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 12px;
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.12);
+  }
+  .hole-btn {
+    position: relative; border-radius: 20px;
+    display: flex; align-items: flex-end; justify-content: center;
+    min-height: 96px;
+  }
+  .hole-btn::after {
+    content: ''; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    width: 74%; max-width: 140px; height: 30px; border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 40%, var(--hole) 0%, var(--hole-deep) 100%);
+  }
+  .hole-btn .char {
+    position: relative; z-index: 1; font-size: 52px; line-height: 1;
+    margin-bottom: 18px; transform: scale(0);
+  }
+  .hole-btn .char.pop { animation: pop 0.18s ease-out forwards; }
+  @keyframes pop { from { transform: scale(0) translateY(20px); } to { transform: scale(1) translateY(0); } }
+  .hole-btn .hit { 
+    position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center;
+    font-size: 44px; opacity: 0; pointer-events: none;
+  }
+  .hole-btn .hit.show { opacity: 1; }
+  .hole-btn.shake { animation: hshake 0.3s; }
+  @keyframes hshake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  .countdown {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: rgba(0,0,0,0.3); border-radius: 24px;
+  }
+  .cd-num {
+    font-size: 88px; font-weight: 900; color: #fff; line-height: 1.2;
+    text-shadow: 0 5px 0 rgba(0,0,0,0.25);
+  }
+  .cd-num.go { font-size: 48px; color: var(--sun); }
+  .cd-num.zoom { animation: cdzoom 0.5s ease-out; }
+  @keyframes cdzoom { from { transform: scale(1.7); opacity: 0.2; } to { transform: scale(1); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hole-btn.shake { animation: none; }
+    .hole-btn .char.pop { animation: none; transform: scale(1); }
+    .cd-num.zoom { animation: none; }
+  }
+
+  /* ---------- 結果 ---------- */
+  #result { justify-content: center; text-align: center; gap: 20px; }
+  .medal { font-size: 90px; line-height: 1; }
+  .result-stars { font-size: 44px; font-weight: 900; color: #E8A200; }
+  .cheer { font-size: 24px; font-weight: 900; color: #2E7D32; }
+  .result-btns { display: flex; justify-content: center; gap: 20px; }
+  .icon-btn {
+    background: var(--card); border-radius: 50%;
+    width: 84px; height: 84px; font-size: 40px;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.1);
+    transition: transform 0.08s ease;
+  }
+  .icon-btn:active { transform: scale(0.94); }
+
+  /* ---------- チケット ---------- */
+  .tickets-box {
+    background: var(--card); border-radius: 999px; padding: 10px 18px;
+    font-size: 15px; font-weight: 800; color: #4E6E58;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08); align-self: center;
+  }
+  .tickets-box .balloons { font-size: 20px; letter-spacing: 2px; }
+
+  /* ---------- おやすみ ---------- */
+  #oyasumi {
+    justify-content: center; align-items: center; text-align: center; gap: 22px;
+    background: linear-gradient(180deg, #2B3A67 0%, #1B2447 100%);
+    border-radius: 24px; padding: 24px; color: #F5F2E8;
+  }
+  .moon { font-size: 84px; animation: floaty 3s ease-in-out infinite; }
+  .sleepers { font-size: 32px; letter-spacing: 4px; }
+  .oyasumi-text { font-size: 22px; font-weight: 900; line-height: 1.8; }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  @media (prefers-reduced-motion: reduce) { .moon { animation: none; } }
+
+  .hidden { display: none !important; }
+
+  /* ---------- タブレット(縦横共通: 大きめに表示) ---------- */
+  @media (min-width: 600px) and (min-height: 500px) {
+    #app { max-width: 560px; }
+    .title { font-size: 44px; }
+    .subtitle { font-size: 14px; }
+    .rule-note { font-size: 14px; }
+    .level-btn { font-size: 30px; padding: 20px; }
+    .level-btn .lb-best { font-size: 16px; }
+    .tickets-box { font-size: 17px; }
+    .tickets-box .balloons { font-size: 24px; }
+    .sound-toggle { font-size: 34px; }
+    .back-btn { font-size: 34px; }
+    .hud .star-count { font-size: 30px; }
+    .chip { font-size: 20px; }
+    .hole-btn { min-height: 130px; }
+    .hole-btn .char { font-size: 68px; margin-bottom: 24px; }
+    .hole-btn .hit { font-size: 56px; }
+    .hole-btn::after { height: 40px; max-width: 185px; }
+    .medal { font-size: 120px; }
+    .result-stars { font-size: 56px; }
+    .cheer { font-size: 30px; }
+    .icon-btn { width: 100px; height: 100px; font-size: 48px; }
+    .oyasumi-text { font-size: 26px; }
+  }
+
+  /* ---------- 横画面: 幅を広げて2カラム/3列レイアウト ---------- */
+  @media (orientation: landscape) and (min-width: 640px) {
+    #app { max-width: 900px; }
+    .field { grid-template-columns: repeat(3, 1fr); }
+    #start.active {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "head    head"
+        "tickets label"
+        "rule    levels";
+      gap: 12px 24px;
+      align-content: center;
+    }
+    .start-head { grid-area: head; }
+    #start .tickets-box { grid-area: tickets; justify-self: center; align-self: center; }
+    #start .rule-card { grid-area: rule; align-self: center; justify-content: center; }
+    #start .level-label { grid-area: label; align-self: end; text-align: center; }
+    #start .levels { grid-area: levels; align-self: center; }
+    #start .level-btn { font-size: 26px; }
+  }
+
+  /* ---------- 横画面で高さが低い場合(スマホ横持ちなど): 詰めて収める ---------- */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #app { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+    #game { gap: 6px; }
+    .field { padding: 10px; gap: 8px; grid-template-columns: repeat(3, 1fr); }
+    .hole-btn { min-height: 64px; }
+    .hole-btn .char { font-size: 44px; margin-bottom: 12px; }
+    .hole-btn .hit { font-size: 36px; }
+    .hole-btn::after { height: 22px; bottom: 6px; max-width: 105px; }
+    .hud { padding: 6px 14px; }
+    .hud .star-count { font-size: 20px; }
+    .timebar-track { height: 10px; }
+    #start.active, #result.active { gap: 10px; }
+    .title { font-size: 28px; }
+    .rule-card { padding: 10px; gap: 6px; }
+    .rule-row { font-size: 24px; }
+    .rule-row .verdict { font-size: 28px; }
+    .level-btn { padding: 10px 16px; font-size: 22px; }
+    .medal { font-size: 64px; }
+    .result-stars { font-size: 34px; }
+    .icon-btn { width: 64px; height: 64px; font-size: 30px; }
+    .moon { font-size: 56px; }
+    .oyasumi-text { font-size: 18px; }
+    #oyasumi { gap: 12px; padding: 16px; }
+    .cd-num { font-size: 56px; }
+    .cd-num.go { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <button class="sound-toggle" id="btn-sound">🔊</button>
+
+  <!-- スタート -->
+  <section id="start" class="screen active">
+    <a class="back-btn" href="../../" aria-label="えらぶがめんにもどる">⬅️</a>
+    <div class="start-head">
+      <div class="title">ぴょこっとタッチ</div>
+      <div class="subtitle">4〜6さい向け とっさのはんだんゲーム(おうちのかたへ: 文字が読めなくても遊べます)</div>
+    </div>
+    <div class="tickets-box">きょうは あと <span class="balloons" id="tickets">🎈🎈🎈</span></div>
+    <div class="rule-card">
+      <div class="rule-row ok"><span id="rule-good">🐰 🐶 🐱 🐥</span> → <span class="verdict">👆⭕</span></div>
+      <div class="rule-row ng"><span id="rule-bad">🐝 👻 🐺</span> → <span class="verdict">✋❌</span></div>
+      <div class="rule-note">
+        でてきた「おともだち」をタッチ!<br>
+        ハチとおばけは さわっちゃダメ!<br>
+        ※むずかしいモードでは 🐺オオカミ(🐶のニセモノ)もでるよ
+      </div>
+    </div>
+    <div class="level-label">どれであそぶ?</div>
+    <div class="levels">
+      <button class="level-btn" data-level="l1">
+        <span class="stars">⭐</span><span>🐢 ゆっくり</span><span class="lb-best" id="best-l1">⭐0</span>
+      </button>
+      <button class="level-btn" data-level="l2">
+        <span class="stars">⭐⭐</span><span>🐇 はやい</span><span class="lb-best" id="best-l2">⭐0</span>
+      </button>
+      <button class="level-btn" data-level="l3">
+        <span class="stars">⭐⭐⭐</span><span>🐆 すっごくはやい</span><span class="lb-best" id="best-l3">⭐0</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ゲーム -->
+  <section id="game" class="screen">
+    <div class="hud">
+      <div class="star-count" id="star-count">⭐ 0</div>
+      <div class="rule-mini">
+        <span class="chip chip-ok" id="rule-ok">🐰🐶🐱🐥⭕</span>
+        <span class="chip chip-ng" id="rule-ng">🐝👻❌</span>
+      </div>
+    </div>
+    <div class="timebar-track"><div class="timebar" id="timebar"></div></div>
+    <div class="field-wrap">
+      <div class="field" id="field"></div>
+      <div class="countdown hidden" id="countdown">
+        <div class="cd-num" id="cd-num"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 結果 -->
+  <section id="result" class="screen">
+    <div class="medal" id="medal">🥇</div>
+    <div class="result-stars" id="result-stars">⭐ 0</div>
+    <div class="cheer" id="cheer">すごい!</div>
+    <div class="result-btns">
+      <button class="icon-btn" id="btn-retry">🔁</button>
+      <button class="icon-btn" id="btn-home">🏠</button>
+    </div>
+    <div class="tickets-box" id="result-tickets"></div>
+  </section>
+
+  <!-- おやすみ -->
+  <section id="oyasumi" class="screen">
+    <div class="moon">🌙</div>
+    <div class="sleepers">🐰💤 🐶💤 🐱💤 🐥💤</div>
+    <div class="oyasumi-text">きょうのぶんは おしまい!<br>またあしたね</div>
+    <button class="icon-btn" id="btn-oyasumi-home">🏠</button>
+  </section>
+
+</div>
+
+<script src="../../shared/tickets.js"></script>
+<script>
+(() => {
+  const LEVELS = {
+    l1: { good: ['🐰','🐶','🐱','🐥'], bad: ['🐝'],          spawnGap: 1250, visible: 1700, maxOn: 1, badRatio: 0.25, duration: 40000, medals: [8, 13, 18, 21] },
+    l2: { good: ['🐰','🐶','🐱','🐥'], bad: ['🐝','👻'],     spawnGap: 850,  visible: 1250, maxOn: 2, badRatio: 0.3,  duration: 40000, medals: [10, 18, 25, 31] },
+    l3: { good: ['🐰','🐶','🐱','🐥'], bad: ['🐝','👻','🐺'], spawnGap: 650,  visible: 950,  maxOn: 3, badRatio: 0.35, duration: 40000, medals: [13, 22, 30, 37] },
+  };
+  const HOLES = 6;
+
+  const $ = id => document.getElementById(id);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const shuffle = arr => { const a = [...arr]; for (let i = a.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+  const screens = { start: $('start'), game: $('game'), result: $('result'), oyasumi: $('oyasumi') };
+
+  let bests = { l1: 0, l2: 0, l3: 0 };
+  let soundOn = true;
+  let state = null;
+  let rafId = null;
+
+  // ---------- サウンド(WebAudioで生成、素材不要) ----------
+  let ac = null;
+  function ensureAudio() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (ac && ac.state === 'suspended') ac.resume();
+  }
+  function tone(freq, dur, type, vol, when) {
+    if (!soundOn || !ac) return;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime + when);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + when + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(ac.currentTime + when); o.stop(ac.currentTime + when + dur);
+  }
+  const sndGood = () => { tone(660, 0.12, 'sine', 0.2, 0); tone(990, 0.15, 'sine', 0.2, 0.09); };
+  const sndBad  = () => { tone(160, 0.25, 'square', 0.12, 0); };
+  const sndEnd  = () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.2, 'sine', 0.2, i * 0.15)); };
+
+  // ---------- 保存 ----------
+  function loadBests() {
+    try {
+      const v = localStorage.getItem('pyoko-bests');
+      if (v) Object.assign(bests, JSON.parse(v));
+    } catch (e) {}
+    renderBests();
+  }
+  function saveBests() {
+    try { localStorage.setItem('pyoko-bests', JSON.stringify(bests)); } catch (e) {}
+  }
+  function renderBests() {
+    for (const k of Object.keys(LEVELS)) $('best-' + k).textContent = '⭐' + (bests[k] || 0);
+  }
+
+  // ---------- 1日にあそべる回数(🎈チケット / あそび共通ストア) ----------
+  // 残数の管理は shared/tickets.js(KidsTickets)。設定はハブの保護者ゲートで行う
+  const remaining = () => KidsTickets.remaining();
+  function renderTickets() {
+    $('tickets').textContent = remaining() > 0 ? '🎈'.repeat(remaining()) : 'なし 💤';
+  }
+  function tryStart(levelKey) {
+    if (!KidsTickets.useOne()) { renderTickets(); show('oyasumi'); return; }
+    renderTickets();
+    startRound(levelKey);
+  }
+
+  function show(name) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ---------- 盤面 ----------
+  function buildField() {
+    const field = $('field');
+    field.innerHTML = '';
+    for (let i = 0; i < HOLES; i++) {
+      const b = document.createElement('button');
+      b.className = 'hole-btn';
+      b.dataset.i = i;
+      b.innerHTML = `<span class="char" id="char-${i}"></span><span class="hit" id="hit-${i}"></span>`;
+      b.addEventListener('pointerdown', () => tapHole(i));
+      field.appendChild(b);
+    }
+  }
+
+  function buildDeck(cfg) {
+    // 1ラウンドの出現構成を固定(運によるスコア上限のブレをなくす)
+    const total = Math.round(cfg.duration / cfg.spawnGap);
+    const badN = Math.round(total * cfg.badRatio);
+    return shuffle(Array.from({ length: total }, (_, i) => i < badN));
+  }
+
+  function newState(levelKey) {
+    return {
+      levelKey, cfg: LEVELS[levelKey],
+      stars: 0,
+      deck: buildDeck(LEVELS[levelKey]),
+      holes: Array.from({ length: HOLES }, () => null), // null or {emoji, good, hideTimer}
+      spawnTimer: null,
+      endTime: 0,
+      running: false,
+    };
+  }
+
+  function updateStars() {
+    $('star-count').textContent = '⭐ ' + state.stars;
+  }
+
+  function occupiedCount() {
+    return state.holes.filter(h => h).length;
+  }
+
+  function hideChar(i) {
+    const h = state.holes[i];
+    if (!h) return;
+    clearTimeout(h.hideTimer);
+    state.holes[i] = null;
+    const el = $('char-' + i);
+    el.textContent = '';
+    el.classList.remove('pop');
+  }
+
+  function spawn() {
+    if (!state.running) return;
+    if (occupiedCount() < state.cfg.maxOn) {
+      const empty = state.holes.map((h, i) => h ? -1 : i).filter(i => i >= 0);
+      if (empty.length) {
+        const i = pick(empty);
+        const isBad = state.deck.length ? state.deck.pop() : (Math.random() < state.cfg.badRatio);
+        const emoji = isBad ? pick(state.cfg.bad) : pick(state.cfg.good);
+        const h = { emoji, good: !isBad, hideTimer: setTimeout(() => hideChar(i), state.cfg.visible) };
+        state.holes[i] = h;
+        const el = $('char-' + i);
+        el.textContent = emoji;
+        el.classList.remove('pop');
+        void el.offsetWidth;
+        el.classList.add('pop');
+      }
+    }
+    const jitter = state.cfg.spawnGap * (0.8 + Math.random() * 0.4);
+    state.spawnTimer = setTimeout(spawn, jitter);
+  }
+
+  function showHit(i, emoji) {
+    const el = $('hit-' + i);
+    el.textContent = emoji;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 300);
+  }
+
+  function tapHole(i) {
+    if (!state || !state.running) return;
+    const h = state.holes[i];
+    if (!h) return;
+    hideChar(i);
+    if (h.good) {
+      state.stars++;
+      showHit(i, '✨');
+      sndGood();
+    } else {
+      state.stars = Math.max(0, state.stars - 1);
+      showHit(i, '💥');
+      sndBad();
+      const btn = document.querySelector(`.hole-btn[data-i="${i}"]`);
+      btn.classList.remove('shake');
+      void btn.offsetWidth;
+      btn.classList.add('shake');
+      if (navigator.vibrate) navigator.vibrate(80);
+    }
+    updateStars();
+  }
+
+  function tickTime() {
+    if (!state.running) return;
+    const remain = Math.max(0, state.endTime - performance.now());
+    $('timebar').style.transform = `scaleX(${remain / state.cfg.duration})`;
+    if (remain <= 0) { endRound(); return; }
+    rafId = requestAnimationFrame(tickTime);
+  }
+
+  function runCountdown(done) {
+    const cd = $('countdown'), num = $('cd-num');
+    cd.classList.remove('hidden');
+    const seq = ['3', '2', '1', 'スタート!'];
+    let i = 0;
+    const step = () => {
+      const isGo = i === seq.length - 1;
+      num.textContent = seq[i];
+      num.classList.toggle('go', isGo);
+      num.classList.remove('zoom'); void num.offsetWidth; num.classList.add('zoom');
+      tone(isGo ? 880 : 440, isGo ? 0.3 : 0.12, 'sine', 0.2, 0);
+      i++;
+      setTimeout(() => {
+        if (i < seq.length) { step(); return; }
+        cd.classList.add('hidden');
+        done();
+      }, isGo ? 700 : 800);
+    };
+    step();
+  }
+
+  function startRound(levelKey) {
+    ensureAudio();
+    state = newState(levelKey);
+    buildField();
+    updateStars();
+    $('rule-ok').textContent = state.cfg.good.join('') + '⭕';
+    $('rule-ng').textContent = state.cfg.bad.join('') + '❌';
+    $('timebar').style.transform = 'scaleX(1)';
+    show('game');
+    runCountdown(() => {
+      state.running = true;
+      state.endTime = performance.now() + state.cfg.duration;
+      tickTime();
+      spawn();
+    });
+  }
+
+  function endRound() {
+    state.running = false;
+    clearTimeout(state.spawnTimer);
+    cancelAnimationFrame(rafId);
+    for (let i = 0; i < HOLES; i++) hideChar(i);
+
+    const k = state.levelKey;
+    if (state.stars > (bests[k] || 0)) { bests[k] = state.stars; saveBests(); }
+
+    const m = state.cfg.medals;
+    const s = state.stars;
+    let medal = '🌱', cheer = 'がんばったね!';
+    if (s >= m[3])      { medal = '🏆'; cheer = 'チャンピオン!!'; }
+    else if (s >= m[2]) { medal = '🥇'; cheer = 'すごい!!'; }
+    else if (s >= m[1]) { medal = '🥈'; cheer = 'じょうず!'; }
+    else if (s >= m[0]) { medal = '🥉'; cheer = 'いいね!'; }
+    $('medal').textContent = medal;
+    $('result-stars').textContent = '⭐ ' + s;
+    $('cheer').textContent = cheer;
+    $('result-tickets').textContent = remaining() > 0
+      ? 'あと ' + '🎈'.repeat(remaining())
+      : '🌙 きょうのぶんは おしまい';
+    sndEnd();
+    show('result');
+  }
+
+  // ---------- イベント ----------
+  document.querySelectorAll('.level-btn').forEach(btn => {
+    btn.addEventListener('click', () => tryStart(btn.dataset.level));
+  });
+  $('btn-retry').addEventListener('click', () => tryStart(state.levelKey));
+  $('btn-home').addEventListener('click', () => { renderBests(); renderTickets(); show('start'); });
+  $('btn-oyasumi-home').addEventListener('click', () => { renderTickets(); show('start'); });
+  $('btn-sound').addEventListener('click', () => {
+    soundOn = !soundOn;
+    $('btn-sound').textContent = soundOn ? '🔊' : '🔇';
+  });
+
+  // ハブから戻ってきたとき(bfcache 復帰含む)に残数を最新化
+  window.addEventListener('pageshow', renderTickets);
+
+  buildField();
+  loadBests();
+  renderTickets();
+})();
+
+// ---------- PWA: Service Worker ----------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('../../sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

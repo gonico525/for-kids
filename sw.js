@@ -1,7 +1,12 @@
-const CACHE_NAME = 'pyoko-v2';
+const CACHE_NAME = 'kids-v3';
 const ASSETS = [
   './',
   './index.html',
+  './shared/tickets.js',
+  './games/pyoko/',
+  './games/pyoko/index.html',
+  './study/numakasten/',
+  './study/numakasten/index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

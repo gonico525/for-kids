@@ -1,7 +1,7 @@
 {
-  "name": "ぴょこっとタッチ",
-  "short_name": "ぴょこタッチ",
-  "description": "4〜6さい向け とっさのはんだんゲーム",
+  "name": "こどもひろば",
+  "short_name": "ひろば",
+  "description": "4〜6さい向け あそびとべんきょうのひろば",
   "lang": "ja",
   "start_url": ".",
   "scope": ".",
