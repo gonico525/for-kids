@@ -23,6 +23,7 @@ Deployment is automatic: pushes to `main` trigger `.github/workflows/deploy-page
 - **`games/*/index.html`** — play apps ("あそび"), limited by the shared daily 🎈 tickets. Currently: `games/pyoko/` (ぴょこっとタッチ, a whack-a-mole reaction/judgment game).
 - **`study/*/index.html`** — learning apps ("べんきょう"), **unlimited** — they never consume tickets. Currently: `study/numakasten/` (ヌマーカステン, a two-chamber counting-frame for number sense: free play + quiz mode with 4 levels).
 - **`shared/tickets.js`** — the shared 🎈 ticket store (`window.KidsTickets`): daily play-count limit pooled across ALL games (1–5 per day, default 3). Reads/writes `localStorage` on every call so state stays consistent across pages; migrates the legacy `pyoko-tickets` key on first read. Game pages call `useOne()` to consume; the hub's parental gate calls `setLimit()`/`resetToday()`.
+- **`shared/sound.js`** — the shared sound utility (`window.KidsSound`): WebAudio-synthesized `tone(freq, dur, vol, type, when)` plus a mute setting persisted in `localStorage` (`kids-sound`) and shared across all apps. `tone()`/`ensure()` also resume a suspended AudioContext, so they must be triggered from a user gesture. Apps with sound show a 🔊/🔇 button that calls `setEnabled()` and re-render it on `pageshow`.
 - **`sw.js`** — service worker with a stale-while-revalidate cache, registered at root scope from every page (`../../sw.js` from app pages). **When adding an app or changing cached assets, add the paths to `ASSETS` (both `dir/` and `dir/index.html`) and bump `CACHE_NAME`** (e.g. `kids-v3` → `kids-v4`); old caches are deleted on activate.
 - **`manifest.webmanifest`** / **`icons/`** — PWA install metadata; `start_url` is the hub.
 
@@ -44,7 +45,7 @@ Deployment is automatic: pushes to `main` trigger `.github/workflows/deploy-page
 ### Shared patterns
 
 - **Parental gate** (hub only): settings sit behind a multiplication-quiz gate (`6–9 × 6–9`); a wrong answer shakes the card and regenerates the question.
-- **Sound**: synthesized with WebAudio oscillators (`tone()`), no audio assets. Audio contexts must be created/resumed from a user gesture.
+- **Sound**: use `shared/sound.js` (`KidsSound.tone()`), no audio assets. The AudioContext is created/resumed inside `tone()`/`ensure()`, which must be reached from a user gesture.
 
 ## Conventions
 
