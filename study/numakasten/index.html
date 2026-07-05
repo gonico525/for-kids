@@ -17,6 +17,7 @@
     --paper:#fbf6ea;
     --accent:#c95f4b;
     --good:#4e8f5a;
+    --numsize:clamp(44px,7.5vh,58px); /* 数字ボタンの大きさ(パッドの寸法計算と共有) */
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;overflow:hidden;}
@@ -104,7 +105,8 @@
   #qtext.oops .qnum{color:#8c2f1d;}
 
   /* ---------- stage ---------- */
-  #stage{flex:1 1 auto;position:relative;display:flex;align-items:center;justify-content:center;padding:2px 10px 6px;min-height:0;}
+  #main{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;min-width:0;}
+  #stage{flex:1 1 auto;position:relative;display:flex;align-items:center;justify-content:center;padding:2px 10px 6px;min-height:0;min-width:0;}
   #box{
     position:relative;border-radius:14px;
     max-width:100%;max-height:100%;
@@ -220,12 +222,12 @@
     gap:6px;flex-wrap:wrap;
     padding:4px 10px 10px;
     /* 中身が入れ替わってもステージの高さが揺れないよう1行ぶん確保 */
-    min-height:calc(clamp(44px,7.5vh,58px) + 14px);
+    min-height:calc(var(--numsize) + 14px);
   }
   .num{
     font-family:inherit;font-weight:800;
     font-size:clamp(20px,3.4vh,26px);
-    width:clamp(44px,7.5vh,58px);height:clamp(44px,7.5vh,58px);
+    width:var(--numsize);height:var(--numsize);
     border-radius:50%;
     border:2px solid var(--wood-mid);
     background:var(--paper);color:var(--ink);
@@ -252,6 +254,23 @@
   }
   #doneBtn:active,#nextBtn:active{transform:translateY(3px);box-shadow:0 0 0 #39693f;}
   #nextBtn{background:var(--accent);border-color:#a04836;box-shadow:0 3px 0 #a04836;}
+
+  /* ---------- 回答パッドを右の余白へ(横向きの短い画面・幅800px以上のみ) ----------
+     箱は横長比率固定で高さが先に尽きるため、下にパッドを置くと箱が縮む。
+     幅800px未満(iPhone SE級)はパネルを置くほうが箱が縮むので下配置のまま。 */
+  @media (orientation:landscape) and (max-height:500px) and (min-width:800px){
+    #main{flex-direction:row;}
+    #pad{
+      /* 1段5個=箱の「5のまとまり」と同じ構造で折り返す幅 */
+      flex:0 0 auto;
+      width:calc(var(--numsize)*5 + 4*6px + 24px);
+      min-height:0;height:auto;
+      align-content:center;
+      padding:8px 8px 8px 0;
+    }
+    /* ひだり/おなじ/みぎ は縦に1個ずつ(中途半端な折り返しを防ぐ) */
+    #pad .choice{flex:0 0 100%;}
+  }
 
   /* ---------- rotate hint ---------- */
   #rotateHint{
@@ -312,24 +331,26 @@
 
 <div id="qbar"><div id="qtext"></div></div>
 
-<div id="stage">
-  <div id="box">
-    <div id="inner">
-      <div class="chamber left" id="chamL">
-        <div class="cover hidden" id="coverL"><span>なんこかな？</span></div>
-        <div class="count off" id="countL">0</div>
-      </div>
-      <div id="divider"></div>
-      <div class="chamber right" id="chamR">
-        <div class="cover hidden" id="coverR"><span>なんこかな？</span></div>
-        <div class="count off" id="countR">0</div>
+<div id="main">
+  <div id="stage">
+    <div id="box">
+      <div id="inner">
+        <div class="chamber left" id="chamL">
+          <div class="cover hidden" id="coverL"><span>なんこかな？</span></div>
+          <div class="count off" id="countL">0</div>
+        </div>
+        <div id="divider"></div>
+        <div class="chamber right" id="chamR">
+          <div class="cover hidden" id="coverR"><span>なんこかな？</span></div>
+          <div class="count off" id="countR">0</div>
+        </div>
       </div>
     </div>
+    <div id="stamp"></div>
   </div>
-  <div id="stamp"></div>
-</div>
 
-<div id="pad"></div>
+  <div id="pad"></div>
+</div>
 
 <div id="rotateHint" class="active">
   <div class="phone">📱</div>
