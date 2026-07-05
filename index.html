@@ -90,6 +90,7 @@
     height: 100%; width: 100%; background: var(--sun);
     transform-origin: left; border-radius: 999px;
   }
+  .field-wrap { flex: 1; position: relative; display: flex; }
   .field {
     flex: 1; background: linear-gradient(180deg, var(--grass) 0%, var(--grass-deep) 100%);
     border-radius: 24px; padding: 14px;
@@ -123,9 +124,26 @@
     25% { transform: translateX(-6px); }
     75% { transform: translateX(6px); }
   }
+  .countdown {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: rgba(0,0,0,0.3); border-radius: 24px;
+  }
+  .cd-rule {
+    background: var(--card); border-radius: 999px; padding: 10px 20px;
+    font-size: 22px; box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+  }
+  .cd-num {
+    font-size: 88px; font-weight: 900; color: #fff; line-height: 1.2;
+    text-shadow: 0 5px 0 rgba(0,0,0,0.25);
+  }
+  .cd-num.go { font-size: 48px; color: var(--sun); }
+  .cd-num.zoom { animation: cdzoom 0.5s ease-out; }
+  @keyframes cdzoom { from { transform: scale(1.7); opacity: 0.2; } to { transform: scale(1); opacity: 1; } }
   @media (prefers-reduced-motion: reduce) {
     .hole-btn.shake { animation: none; }
     .hole-btn .char.pop { animation: none; transform: scale(1); }
+    .cd-num.zoom { animation: none; }
   }
 
   /* ---------- 結果 ---------- */
@@ -262,6 +280,10 @@
     .moon { font-size: 56px; }
     .oyasumi-text { font-size: 18px; }
     #oyasumi { gap: 12px; padding: 16px; }
+    .cd-num { font-size: 56px; }
+    .cd-num.go { font-size: 34px; }
+    .cd-rule { font-size: 18px; padding: 6px 14px; }
+    .countdown { gap: 8px; }
   }
 </style>
 </head>
@@ -307,7 +329,13 @@
       <div class="rule-mini" id="rule-mini">🐰🐶🐱🐥⭕ 🐝👻❌</div>
     </div>
     <div class="timebar-track"><div class="timebar" id="timebar"></div></div>
-    <div class="field" id="field"></div>
+    <div class="field-wrap">
+      <div class="field" id="field"></div>
+      <div class="countdown hidden" id="countdown">
+        <div class="cd-rule" id="cd-rule"></div>
+        <div class="cd-num" id="cd-num"></div>
+      </div>
+    </div>
   </section>
 
   <!-- 結果 -->
@@ -559,6 +587,28 @@
     rafId = requestAnimationFrame(tickTime);
   }
 
+  function runCountdown(done) {
+    const cd = $('countdown'), num = $('cd-num');
+    $('cd-rule').textContent = state.cfg.good.join('') + '⭕ ' + state.cfg.bad.join('') + '❌';
+    cd.classList.remove('hidden');
+    const seq = ['3', '2', '1', 'スタート!'];
+    let i = 0;
+    const step = () => {
+      const isGo = i === seq.length - 1;
+      num.textContent = seq[i];
+      num.classList.toggle('go', isGo);
+      num.classList.remove('zoom'); void num.offsetWidth; num.classList.add('zoom');
+      tone(isGo ? 880 : 440, isGo ? 0.3 : 0.12, 'sine', 0.2, 0);
+      i++;
+      setTimeout(() => {
+        if (i < seq.length) { step(); return; }
+        cd.classList.add('hidden');
+        done();
+      }, isGo ? 700 : 800);
+    };
+    step();
+  }
+
   function startRound(levelKey) {
     ensureAudio();
     state = newState(levelKey);
@@ -566,11 +616,14 @@
     updateStars();
     $('rule-mini').textContent =
       state.cfg.good.join('') + '⭕ ' + state.cfg.bad.join('') + '❌';
+    $('timebar').style.transform = 'scaleX(1)';
     show('game');
-    state.running = true;
-    state.endTime = performance.now() + state.cfg.duration;
-    tickTime();
-    spawn();
+    runCountdown(() => {
+      state.running = true;
+      state.endTime = performance.now() + state.cfg.duration;
+      tickTime();
+      spawn();
+    });
   }
 
   function endRound() {
