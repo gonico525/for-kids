@@ -1,0 +1,2 @@
+# tools/smoke.mjs 用に playwright-core を --no-save で入れたときの残り
+node_modules/

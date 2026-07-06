@@ -319,6 +319,7 @@
 
 <script src="../../shared/tickets.js"></script>
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/app-boot.js"></script>
 <script>
 (() => {
   // dance/freeze はフェーズの長さの範囲(ms)。長さがランダムなのが「いつ止まるか分からない」
@@ -490,32 +491,17 @@
   $('btn-retry').addEventListener('click', () => tryStart(state.levelKey));
   $('btn-home').addEventListener('click', () => { renderTickets(); show('start'); });
   $('btn-oyasumi-home').addEventListener('click', () => { renderTickets(); show('start'); });
-  function renderSound() {
-    $('btn-sound').textContent = KidsSound.enabled() ? '🔊' : '🔇';
-  }
-  $('btn-sound').addEventListener('click', () => {
-    KidsSound.setEnabled(!KidsSound.enabled());
-    renderSound();
-    if (KidsSound.enabled()) sndGood();
-  });
+  KidsApp.init({ soundButton: $('btn-sound'), onSoundOn: sndGood });
 
-  // ハブから戻ってきたとき(bfcache 復帰含む)に残数・音設定を最新化
-  window.addEventListener('pageshow', () => { renderTickets(); renderSound(); });
+  // ハブから戻ってきたとき(bfcache 復帰含む)に残数を最新化
+  window.addEventListener('pageshow', renderTickets);
   // 画面を閉じた/隠したら音楽が鳴りっぱなしにならないように止める
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screens.game.classList.contains('active')) { stopRound(); show('start'); }
   });
 
   renderTickets();
-  renderSound();
 })();
-
-// ---------- PWA: Service Worker ----------
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('../../sw.js').catch(() => {});
-  });
-}
 </script>
 </body>
 </html>

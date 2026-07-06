@@ -4,7 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>つぎはな〜に？ — もようのべんきょう</title>
+<link rel="manifest" href="../../manifest.webmanifest">
 <meta name="theme-color" content="#FFF1D6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="つぎはな〜に？">
+<link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
 <style>
   :root{
@@ -179,6 +185,8 @@
 </div>
 
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/progress.js"></script>
+<script src="../../shared/app-boot.js"></script>
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -198,11 +206,7 @@
   function playMelody(letters){
     letters.forEach((L,i)=>KidsSound.tone(PITCH[L]||600,0.15,0.11,'sine',i*0.2));
   }
-  const soundBtn=$('soundBtn');
-  function renderSound(){ soundBtn.textContent = KidsSound.enabled() ? '🔊' : '🔇'; }
-  soundBtn.onclick=()=>{ KidsSound.setEnabled(!KidsSound.enabled()); renderSound(); if(KidsSound.enabled()) sGood(); };
-  renderSound();
-  window.addEventListener('pageshow',renderSound);
+  KidsApp.init({ soundButton: $('soundBtn'), onSoundOn: sGood });
 
   // iOSは最初のタップまで音を出せないので、出題時の自動メロディは操作後だけ鳴らす
   let interacted=false;
@@ -232,16 +236,14 @@
     4:{units:['AB','AAB','ABB','ABC','AABC','ABCC'], mode:'translate'},
   };
 
-  const state={lv:1, streak:0, qid:0};
-  try{
-    const s=parseInt(localStorage.getItem('tsuginani-level'),10);
-    if(s>=1 && s<=4) state.lv=s;
-  }catch(e){}
+  const state={qid:0};
+  // レベルの保存と ⭐ストリーク昇格は共通モジュール(shared/progress.js)に任せる
+  const prog=KidsProgress.create({
+    key:'tsuginani-level', maxLevel:4,
+    onChange:(lv,streak)=>{ $('streak').textContent='⭐ '+streak; renderChips(); },
+  });
 
   const Q={letters:[], mode:'', fillFrom:0, filled:0, tokens:{}, pal:[], clean:true, done:false};
-
-  function setStreak(n){ state.streak=n; $('streak').textContent='⭐ '+n; }
-  function saveLevel(){ try{ localStorage.setItem('tsuginani-level', state.lv); }catch(e){} }
   function showStamp(ch){
     stamp.textContent=ch;
     stamp.classList.remove('show'); void stamp.offsetWidth;
@@ -259,7 +261,7 @@
   function newQuestion(){
     Q.qid=++state.qid;
     stamp.classList.remove('show');
-    const cfg=LV[state.lv];
+    const cfg=LV[prog.level];
     const unit=pick(cfg.units);
     const kinds=[...new Set(unit)];                       // ['A','B'] など
     const baseSet=pick(SETS);
@@ -356,7 +358,7 @@
       if(Q.filled>=cells.length) onCorrect();
     }else{
       Q.clean=false;
-      setStreak(0);
+      prog.resetStreak();
       sOops();
       cell.classList.remove('bad'); void cell.offsetWidth;
       cell.classList.add('bad');
@@ -377,7 +379,7 @@
     if(ok){ onCorrect(); return; }
     // やりなおし: 下段を空に戻す(お手本は見えたまま)
     Q.clean=false;
-    setStreak(0);
+    prog.resetStreak();
     sOops();
     showStamp('❌');
     const myId=Q.qid;
@@ -396,14 +398,14 @@
     sGood();
     playMelody(Q.letters); // 完成したもようをメロディで聞かせる
     const myId=Q.qid;
-    if(Q.clean) setStreak(state.streak+1);
-    if(state.streak>=5 && state.lv<4){
+    if(Q.clean) prog.addStar();
+    if(prog.canLevelUp()){
       // ⭐5つで自動レベルアップ(簡単なままの反復は効果が薄いので挑戦を上げ続ける)
       setTimeout(()=>{
         if(myId!==Q.qid) return;
         showStamp('🌟');
         sUp();
-        state.lv++; saveLevel(); renderChips(); setStreak(0);
+        prog.levelUp();
         setTimeout(()=>{ if(myId===state.qid) newQuestion(); },1200);
       },1400);
     }else{
@@ -413,13 +415,10 @@
 
   /* ================= レベル切替 ================= */
   function renderChips(){
-    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===state.lv));
+    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===prog.level));
   }
   function setLevel(lv){
-    state.lv=lv;
-    saveLevel();
-    renderChips();
-    setStreak(0);
+    prog.setLevel(lv);
     setTimeout(newQuestion, 200);
   }
   document.querySelectorAll('.chip').forEach(ch=>{
@@ -440,13 +439,6 @@
   renderChips();
   newQuestion();
 })();
-
-// ---------- PWA: Service Worker ----------
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('../../sw.js').catch(() => {});
-  });
-}
 </script>
 </body>
 </html>

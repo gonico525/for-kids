@@ -4,7 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>やじるしめいろ — かんがえるべんきょう</title>
+<link rel="manifest" href="../../manifest.webmanifest">
 <meta name="theme-color" content="#DCF0D2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="やじるしめいろ">
+<link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
 <style>
   :root{
@@ -219,6 +225,8 @@
 </div>
 
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/progress.js"></script>
+<script src="../../shared/app-boot.js"></script>
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -234,11 +242,7 @@
   const sOops =()=>{ KidsSound.tone(300,0.18,0.12,'sine'); KidsSound.tone(220,0.30,0.12,'sine',0.15); };
   const sHmm  =()=>{ KidsSound.tone(392,0.15,0.12,'sine'); KidsSound.tone(311,0.25,0.12,'sine',0.18); };
   const sUp   =()=>{ [523,659,784,1046].forEach((f,i)=>KidsSound.tone(f,0.15,0.13,'triangle',i*0.12)); };
-  const soundBtn=$('soundBtn');
-  function renderSound(){ soundBtn.textContent = KidsSound.enabled() ? '🔊' : '🔇'; }
-  soundBtn.onclick=()=>{ KidsSound.setEnabled(!KidsSound.enabled()); renderSound(); if(KidsSound.enabled()) sGood(); };
-  renderSound();
-  window.addEventListener('pageshow',renderSound);
+  KidsApp.init({ soundButton: $('soundBtn'), onSoundOn: sGood });
 
   /* ================= レベル設計 =================
      ①は1タップ=1歩(矢印と動きの対応づけを学ぶ)。②から「先に全部ならべて▶で実行」
@@ -255,11 +259,11 @@
   const DIR={L:[-1,0],R:[1,0],U:[0,-1],D:[0,1]};
   const ARROW={L:'⬅️',R:'➡️',U:'⬆️',D:'⬇️'};
 
-  const state={lv:1, streak:0};
-  try{
-    const s=parseInt(localStorage.getItem('yajirushi-level'),10);
-    if(s>=1 && s<=4) state.lv=s;
-  }catch(e){}
+  // レベルの保存と ⭐ストリーク昇格は共通モジュール(shared/progress.js)に任せる
+  const progress=KidsProgress.create({
+    key:'yajirushi-level', maxLevel:4,
+    onChange:(lv,streak)=>{ $('streak').textContent='⭐ '+streak; renderChips(); },
+  });
 
   let P=null;          // 今の迷路 {C,R,start,goal,rocks:Set}
   let pos=[0,0];       // うさぎの現在マス
@@ -267,8 +271,6 @@
   let running=false, done=false, runId=0;
   let cell=64;         // マス1個のピクセルサイズ
 
-  function setStreak(n){ state.streak=n; $('streak').textContent='⭐ '+n; }
-  function saveLevel(){ try{ localStorage.setItem('yajirushi-level', state.lv); }catch(e){} }
   function showStamp(ch){
     stamp.textContent=ch;
     stamp.classList.remove('show'); void stamp.offsetWidth;
@@ -352,7 +354,7 @@
 
   /* ================= プログラム表示 ================= */
   function renderProg(){
-    const cfg=LV[state.lv];
+    const cfg=LV[progress.level];
     progEl.style.display = cfg.mode==='plan' ? 'flex' : 'none';
     $('delBtn').style.display = cfg.mode==='plan' ? '' : 'none';
     $('goBtn').style.display  = cfg.mode==='plan' ? '' : 'none';
@@ -392,16 +394,16 @@
     chara.classList.add('happy');
     showStamp('⭕');
     sGood();
-    setStreak(state.streak+1);
+    progress.addStar();
     padEnabled(false);
     const myRun=++runId;
-    if(state.streak>=5 && state.lv<4){
+    if(progress.canLevelUp()){
       // ⭐5つで自動レベルアップ(挑戦の難度を上げ続ける)
       setTimeout(()=>{
         if(myRun!==runId) return;
         showStamp('🌟');
         sUp();
-        state.lv++; saveLevel(); renderChips(); setStreak(0);
+        progress.levelUp();
         setTimeout(newPuzzle,1200);
       },1500);
     }else{
@@ -453,7 +455,7 @@
   document.querySelectorAll('#pad .key[data-dir]').forEach(b=>{
     b.onclick=()=>{
       if(running||done) return;
-      const key=b.dataset.dir, cfg=LV[state.lv];
+      const key=b.dataset.dir, cfg=LV[progress.level];
       if(cfg.mode==='sugu'){
         // ①: タップですぐ1歩うごく
         const d=DIR[key];
@@ -481,7 +483,7 @@
   /* ================= 出題・レベル ================= */
   function newPuzzle(){
     runId++;
-    const cfg=LV[state.lv];
+    const cfg=LV[progress.level];
     P=genPuzzle(cfg);
     prog=[];
     running=false; done=false;
@@ -494,14 +496,11 @@
     setPos(P.start,false);
   }
   function renderChips(){
-    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===state.lv));
+    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===progress.level));
   }
   document.querySelectorAll('.chip').forEach(ch=>{
     ch.onclick=()=>{
-      state.lv=+ch.dataset.lv;
-      saveLevel();
-      renderChips();
-      setStreak(0);
+      progress.setLevel(+ch.dataset.lv);
       newPuzzle();
     };
   });
@@ -515,13 +514,6 @@
   renderChips();
   newPuzzle();
 })();
-
-// ---------- PWA: Service Worker ----------
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('../../sw.js').catch(() => {});
-  });
-}
 </script>
 </body>
 </html>

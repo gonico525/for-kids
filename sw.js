@@ -1,9 +1,11 @@
-const CACHE_NAME = 'kids-v11';
+const CACHE_NAME = 'kids-v13';
 const ASSETS = [
   './',
   './index.html',
   './shared/tickets.js',
   './shared/sound.js',
+  './shared/app-boot.js',
+  './shared/progress.js',
   './games/pyoko/',
   './games/pyoko/index.html',
   './games/daruma/',
@@ -16,6 +18,7 @@ const ASSETS = [
   './study/tsuginani/index.html',
   './study/yajirushi/',
   './study/yajirushi/index.html',
+  // @new-app:assets (tools/new_app.py がここにエントリを挿入する。消さないこと)
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
