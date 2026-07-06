@@ -225,6 +225,7 @@
 </div>
 
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/progress.js"></script>
 <script src="../../shared/app-boot.js"></script>
 <script>
 (function(){
@@ -258,11 +259,11 @@
   const DIR={L:[-1,0],R:[1,0],U:[0,-1],D:[0,1]};
   const ARROW={L:'⬅️',R:'➡️',U:'⬆️',D:'⬇️'};
 
-  const state={lv:1, streak:0};
-  try{
-    const s=parseInt(localStorage.getItem('yajirushi-level'),10);
-    if(s>=1 && s<=4) state.lv=s;
-  }catch(e){}
+  // レベルの保存と ⭐ストリーク昇格は共通モジュール(shared/progress.js)に任せる
+  const progress=KidsProgress.create({
+    key:'yajirushi-level', maxLevel:4,
+    onChange:(lv,streak)=>{ $('streak').textContent='⭐ '+streak; renderChips(); },
+  });
 
   let P=null;          // 今の迷路 {C,R,start,goal,rocks:Set}
   let pos=[0,0];       // うさぎの現在マス
@@ -270,8 +271,6 @@
   let running=false, done=false, runId=0;
   let cell=64;         // マス1個のピクセルサイズ
 
-  function setStreak(n){ state.streak=n; $('streak').textContent='⭐ '+n; }
-  function saveLevel(){ try{ localStorage.setItem('yajirushi-level', state.lv); }catch(e){} }
   function showStamp(ch){
     stamp.textContent=ch;
     stamp.classList.remove('show'); void stamp.offsetWidth;
@@ -355,7 +354,7 @@
 
   /* ================= プログラム表示 ================= */
   function renderProg(){
-    const cfg=LV[state.lv];
+    const cfg=LV[progress.level];
     progEl.style.display = cfg.mode==='plan' ? 'flex' : 'none';
     $('delBtn').style.display = cfg.mode==='plan' ? '' : 'none';
     $('goBtn').style.display  = cfg.mode==='plan' ? '' : 'none';
@@ -395,16 +394,16 @@
     chara.classList.add('happy');
     showStamp('⭕');
     sGood();
-    setStreak(state.streak+1);
+    progress.addStar();
     padEnabled(false);
     const myRun=++runId;
-    if(state.streak>=5 && state.lv<4){
+    if(progress.canLevelUp()){
       // ⭐5つで自動レベルアップ(挑戦の難度を上げ続ける)
       setTimeout(()=>{
         if(myRun!==runId) return;
         showStamp('🌟');
         sUp();
-        state.lv++; saveLevel(); renderChips(); setStreak(0);
+        progress.levelUp();
         setTimeout(newPuzzle,1200);
       },1500);
     }else{
@@ -456,7 +455,7 @@
   document.querySelectorAll('#pad .key[data-dir]').forEach(b=>{
     b.onclick=()=>{
       if(running||done) return;
-      const key=b.dataset.dir, cfg=LV[state.lv];
+      const key=b.dataset.dir, cfg=LV[progress.level];
       if(cfg.mode==='sugu'){
         // ①: タップですぐ1歩うごく
         const d=DIR[key];
@@ -484,7 +483,7 @@
   /* ================= 出題・レベル ================= */
   function newPuzzle(){
     runId++;
-    const cfg=LV[state.lv];
+    const cfg=LV[progress.level];
     P=genPuzzle(cfg);
     prog=[];
     running=false; done=false;
@@ -497,14 +496,11 @@
     setPos(P.start,false);
   }
   function renderChips(){
-    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===state.lv));
+    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===progress.level));
   }
   document.querySelectorAll('.chip').forEach(ch=>{
     ch.onclick=()=>{
-      state.lv=+ch.dataset.lv;
-      saveLevel();
-      renderChips();
-      setStreak(0);
+      progress.setLevel(+ch.dataset.lv);
       newPuzzle();
     };
   });
