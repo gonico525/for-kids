@@ -330,9 +330,13 @@
 
 <script src="../../shared/tickets.js"></script>
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/emoji.js"></script>
 <script src="../../shared/app-boot.js"></script>
 <script>
 (() => {
+  // 絵文字フォントが古い端末(Fire HD 10 など)では 🪷 が出ないので 🍀 に差し替える
+  const EMOJI = KidsEmoji.fix({ '🪷': '🍀' });
+
   // speed は「レーン幅ぶん / 秒」。padW はレーン幅に対するはっぱの当たり判定の割合。
   // movePad が true のレベルは1回ごとにはっぱの場所も変わる。
   const LEVELS = {
@@ -404,7 +408,7 @@
     for (let i = 0; i < state.cfg.tries; i++) {
       const s = document.createElement('span');
       const r = state.results[i];
-      s.textContent = r === undefined ? '🪷' : (r ? '⭕' : '💦');
+      s.textContent = r === undefined ? EMOJI['🪷'] : (r ? '⭕' : '💦');
       if (r === true) s.classList.add('hit');
       if (r === false) s.classList.add('miss');
       t.appendChild(s);

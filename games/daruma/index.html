@@ -319,15 +319,18 @@
 
 <script src="../../shared/tickets.js"></script>
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/emoji.js"></script>
 <script src="../../shared/app-boot.js"></script>
 <script>
 (() => {
+  // 絵文字フォントが古い端末(Fire HD 10 など)では新しい絵文字を古い世代に差し替える
+  const EMOJI = KidsEmoji.fix({ '🧍': '💂', '🕺': '💃', '🦶': '👣' });
   // dance/freeze はフェーズの長さの範囲(ms)。長さがランダムなのが「いつ止まるか分からない」
   // という抑制の練習のキモなので、固定値にしないこと。
   const LEVELS = {
     m1: { stops: 6, dance: [4000, 7000], freeze: [2000, 3500], noteGap: 240, moves: [['💃','おどろう!']] },
     m2: { stops: 6, dance: [4000, 7000], freeze: [2000, 3500], noteGap: 240,
-          moves: [['🐰','ぴょんぴょん'],['🐘','のっしのっし'],['🐢','ゆーっくり'],['🦶','あしぶみ'],['🙌','ばんざい'],['🌀','ぐるぐる']] },
+          moves: [['🐰','ぴょんぴょん'],['🐘','のっしのっし'],['🐢','ゆーっくり'],[EMOJI['🦶'],'あしぶみ'],['🙌','ばんざい'],['🌀','ぐるぐる']] },
     m3: { stops: 8, dance: [2500, 5000], freeze: [3000, 5000], noteGap: 200, moves: [['💃','おどろう!']] },
   };
   // 明るいループメロディ(ドレミソラのペンタトニック)
