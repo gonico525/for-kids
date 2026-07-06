@@ -244,6 +244,7 @@
 </div>
 
 <script src="shared/tickets.js"></script>
+<script src="shared/app-boot.js"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -313,11 +314,7 @@
 })();
 
 // ---------- PWA: Service Worker ----------
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  });
-}
+KidsApp.init();
 </script>
 </body>
 </html>

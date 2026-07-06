@@ -337,6 +337,7 @@
 
 <script src="../../shared/tickets.js"></script>
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/app-boot.js"></script>
 <script>
 (() => {
   const LEVELS = {
@@ -572,30 +573,15 @@
   $('btn-retry').addEventListener('click', () => tryStart(state.levelKey));
   $('btn-home').addEventListener('click', () => { renderBests(); renderTickets(); show('start'); });
   $('btn-oyasumi-home').addEventListener('click', () => { renderTickets(); show('start'); });
-  function renderSound() {
-    $('btn-sound').textContent = KidsSound.enabled() ? '🔊' : '🔇';
-  }
-  $('btn-sound').addEventListener('click', () => {
-    KidsSound.setEnabled(!KidsSound.enabled());
-    renderSound();
-    if (KidsSound.enabled()) sndGood(); // ONにしたのが音で分かるように
-  });
+  KidsApp.init({ soundButton: $('btn-sound'), onSoundOn: sndGood });
 
-  // ハブから戻ってきたとき(bfcache 復帰含む)に残数・音設定を最新化
-  window.addEventListener('pageshow', () => { renderTickets(); renderSound(); });
+  // ハブから戻ってきたとき(bfcache 復帰含む)に残数を最新化
+  window.addEventListener('pageshow', renderTickets);
 
   buildField();
   loadBests();
   renderTickets();
-  renderSound();
 })();
-
-// ---------- PWA: Service Worker ----------
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('../../sw.js').catch(() => {});
-  });
-}
 </script>
 </body>
 </html>

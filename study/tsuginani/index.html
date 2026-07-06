@@ -179,6 +179,7 @@
 </div>
 
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/app-boot.js"></script>
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -198,11 +199,7 @@
   function playMelody(letters){
     letters.forEach((L,i)=>KidsSound.tone(PITCH[L]||600,0.15,0.11,'sine',i*0.2));
   }
-  const soundBtn=$('soundBtn');
-  function renderSound(){ soundBtn.textContent = KidsSound.enabled() ? '🔊' : '🔇'; }
-  soundBtn.onclick=()=>{ KidsSound.setEnabled(!KidsSound.enabled()); renderSound(); if(KidsSound.enabled()) sGood(); };
-  renderSound();
-  window.addEventListener('pageshow',renderSound);
+  KidsApp.init({ soundButton: $('soundBtn'), onSoundOn: sGood });
 
   // iOSは最初のタップまで音を出せないので、出題時の自動メロディは操作後だけ鳴らす
   let interacted=false;
@@ -440,13 +437,6 @@
   renderChips();
   newQuestion();
 })();
-
-// ---------- PWA: Service Worker ----------
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('../../sw.js').catch(() => {});
-  });
-}
 </script>
 </body>
 </html>
