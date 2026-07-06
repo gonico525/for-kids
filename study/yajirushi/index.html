@@ -310,7 +310,10 @@
   /* ================= 盤面 ================= */
   function buildBoard(){
     board.innerHTML='';
-    board.style.gridTemplateColumns=`repeat(${P.C},1fr)`;
+    // 行を指定しないと絵文字入りのマスだけ高くなり行の高さが揃わないため、
+    // 縦横とも minmax(0,1fr) で均等に固定する
+    board.style.gridTemplateColumns=`repeat(${P.C},minmax(0,1fr))`;
+    board.style.gridTemplateRows=`repeat(${P.R},minmax(0,1fr))`;
     for(let y=0;y<P.R;y++)for(let x=0;x<P.C;x++){
       const d=document.createElement('div');
       d.className='cell'+((x+y)%2?' alt':'');
