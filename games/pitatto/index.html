@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ぴたっとストップ — タイミングゲーム</title>
+<link rel="manifest" href="../../manifest.webmanifest">
+<meta name="theme-color" content="#BDE8FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ぴたっとストップ">
+<link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
+<style>
+  :root {
+    --sky: #BDE8FF;
+    --sky-deep: #8FD4FF;
+    --pond: #64B8E8;
+    --pond-deep: #3E97CC;
+    --card: #FFFFFF;
+    --ink: #3A3A3A;
+    --sun: #FFD644;
+    --good: #58C471;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body {
+    background: linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 100%);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+    display: flex; justify-content: center;
+  }
+  #app {
+    position: relative;
+    width: 100%; max-width: 430px; min-height: 100dvh;
+    display: flex; flex-direction: column;
+    padding: calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+  }
+  .screen { flex: 1; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+  button { font-family: inherit; border: none; cursor: pointer; background: none; }
+
+  /* ---------- スタート ---------- */
+  #start { justify-content: center; text-align: center; gap: 16px; }
+  .title { font-size: 32px; font-weight: 900; color: #2E7D32; text-shadow: 2px 2px 0 #fff; }
+  .subtitle { font-size: 12px; color: #4E6E58; }
+  .rule-card {
+    background: var(--card); border-radius: 20px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.08);
+  }
+  .rule-row {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 30px; padding: 8px; border-radius: 14px; background: #E7F4FB;
+  }
+  .rule-note { font-size: 12px; color: #777; line-height: 1.7; }
+  .level-label { font-size: 14px; font-weight: 800; color: #2E7D32; }
+  .levels { display: flex; flex-direction: column; gap: 10px; }
+  .level-btn {
+    background: var(--card); border-radius: 20px; padding: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 24px; box-shadow: 0 5px 0 rgba(0,0,0,0.1);
+    transition: transform 0.08s ease;
+  }
+  .level-btn:active { transform: scale(0.96); }
+  .level-btn .stars { letter-spacing: 2px; }
+  .level-btn .lb-best { font-size: 14px; font-weight: 800; color: #E8A200; }
+  .sound-toggle { position: absolute; top: 14px; right: 14px; font-size: 28px; z-index: 2; }
+  .back-btn { position: absolute; top: 14px; left: 14px; font-size: 28px; text-decoration: none; z-index: 2; }
+
+  /* ---------- ゲーム ---------- */
+  #game { gap: 10px; }
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--card); border-radius: 999px; padding: 8px 16px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+  }
+  .hud .star-count { font-size: 24px; font-weight: 900; color: #E8A200; }
+  .tries { display: flex; gap: 4px; font-size: 14px; }
+  .tries span { opacity: 0.3; }
+  .tries span.hit { opacity: 1; }
+  .tries span.miss { opacity: 1; filter: grayscale(1); }
+  #field {
+    flex: 1; position: relative; border-radius: 24px; overflow: hidden;
+    background: linear-gradient(180deg, var(--pond) 0%, var(--pond-deep) 100%);
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.12);
+  }
+  #lane {
+    position: absolute; left: 6%; right: 6%; top: 50%;
+    height: 14px; margin-top: -7px;
+    background: rgba(255,255,255,0.35); border-radius: 999px;
+  }
+  #pad {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    font-size: 58px; line-height: 1;
+    filter: drop-shadow(0 4px 3px rgba(0,0,0,0.25));
+  }
+  #frog {
+    position: absolute; top: calc(50% - 52px); transform: translateX(-50%);
+    font-size: 46px; line-height: 1; z-index: 2;
+  }
+  #frog.hop { animation: hop 0.45s ease-out; }
+  @keyframes hop {
+    0% { transform: translateX(-50%) translateY(0); }
+    45% { transform: translateX(-50%) translateY(-34px) scale(1.1); }
+    100% { transform: translateX(-50%) translateY(26px); }
+  }
+  #frog.splash-down { animation: splashdown 0.45s ease-in; }
+  @keyframes splashdown {
+    0% { transform: translateX(-50%) translateY(0) rotate(0); }
+    100% { transform: translateX(-50%) translateY(40px) rotate(24deg); opacity: 0.4; }
+  }
+  #judge {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; align-items: center; justify-content: center;
+    font-size: min(24vh, 110px); pointer-events: none; opacity: 0;
+  }
+  #judge.show { animation: judgePop 0.8s ease-out forwards; }
+  @keyframes judgePop {
+    0% { opacity: 0; transform: scale(0.3); }
+    25% { opacity: 1; transform: scale(1.12); }
+    45% { transform: scale(1); }
+    75% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #tap-hint {
+    position: absolute; bottom: 14px; left: 0; right: 0; z-index: 1;
+    text-align: center; font-size: 17px; font-weight: 900; color: #fff;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.25);
+  }
+  .countdown {
+    position: absolute; inset: 0; z-index: 4;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: rgba(0,0,0,0.3);
+  }
+  .cd-num {
+    font-size: 88px; font-weight: 900; color: #fff; line-height: 1.2;
+    text-shadow: 0 5px 0 rgba(0,0,0,0.25);
+  }
+  .cd-num.go { font-size: 48px; color: var(--sun); }
+  .cd-num.zoom { animation: cdzoom 0.5s ease-out; }
+  @keyframes cdzoom { from { transform: scale(1.7); opacity: 0.2; } to { transform: scale(1); opacity: 1; } }
+
+  /* ---------- 結果 ---------- */
+  #result { justify-content: center; text-align: center; gap: 20px; }
+  .medal { font-size: 90px; line-height: 1; }
+  .result-stars { font-size: 44px; font-weight: 900; color: #E8A200; }
+  .cheer { font-size: 24px; font-weight: 900; color: #2E7D32; }
+  .result-btns { display: flex; justify-content: center; gap: 20px; }
+  .icon-btn {
+    background: var(--card); border-radius: 50%;
+    width: 84px; height: 84px; font-size: 40px;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.1);
+    transition: transform 0.08s ease;
+  }
+  .icon-btn:active { transform: scale(0.94); }
+
+  /* ---------- チケット ---------- */
+  .tickets-box {
+    background: var(--card); border-radius: 999px; padding: 10px 18px;
+    font-size: 15px; font-weight: 800; color: #4E6E58;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08); align-self: center;
+  }
+  .tickets-box .balloons { font-size: 20px; letter-spacing: 2px; }
+
+  /* ---------- おやすみ ---------- */
+  #oyasumi {
+    justify-content: center; align-items: center; text-align: center; gap: 22px;
+    background: linear-gradient(180deg, #2B3A67 0%, #1B2447 100%);
+    border-radius: 24px; padding: 24px; color: #F5F2E8;
+  }
+  .moon { font-size: 84px; animation: floaty 3s ease-in-out infinite; }
+  .sleepers { font-size: 32px; letter-spacing: 4px; }
+  .oyasumi-text { font-size: 22px; font-weight: 900; line-height: 1.8; }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+  .hidden { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #frog.hop, #frog.splash-down { animation: none; }
+    .cd-num.zoom { animation: none; }
+    .moon { animation: none; }
+    #judge.show { animation: judgeFade 0.8s forwards; }
+  }
+  @keyframes judgeFade {
+    0% { opacity: 0; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; }
+  }
+
+  /* ---------- タブレット(縦横共通: 大きめに表示) ---------- */
+  @media (min-width: 600px) and (min-height: 500px) {
+    #app { max-width: 560px; }
+    .title { font-size: 42px; }
+    .subtitle { font-size: 14px; }
+    .rule-note { font-size: 14px; }
+    .level-btn { font-size: 28px; padding: 20px; }
+    .level-btn .lb-best { font-size: 16px; }
+    .tickets-box { font-size: 17px; }
+    .sound-toggle, .back-btn { font-size: 34px; }
+    .hud .star-count { font-size: 30px; }
+    #pad { font-size: 74px; }
+    #frog { font-size: 58px; top: calc(50% - 64px); }
+    .medal { font-size: 120px; }
+    .result-stars { font-size: 56px; }
+    .cheer { font-size: 30px; }
+    .icon-btn { width: 100px; height: 100px; font-size: 48px; }
+    .oyasumi-text { font-size: 26px; }
+  }
+
+  /* ---------- 横画面: スタートを2カラムに ---------- */
+  @media (orientation: landscape) and (min-width: 640px) {
+    #app { max-width: 900px; }
+    #start.active {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "head    head"
+        "tickets label"
+        "rule    levels";
+      gap: 12px 24px;
+      align-content: center;
+    }
+    .start-head { grid-area: head; }
+    #start .tickets-box { grid-area: tickets; justify-self: center; align-self: center; }
+    #start .rule-card { grid-area: rule; align-self: center; justify-content: center; }
+    #start .level-label { grid-area: label; align-self: end; text-align: center; }
+    #start .levels { grid-area: levels; align-self: center; }
+  }
+
+  /* ---------- 横画面で高さが低い場合: 詰めて収める ---------- */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #app { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+    #game { gap: 6px; }
+    #start.active, #result.active { gap: 10px; }
+    .title { font-size: 26px; }
+    .rule-card { padding: 10px; gap: 6px; }
+    .rule-row { font-size: 22px; }
+    .level-btn { padding: 10px 16px; font-size: 20px; }
+    .hud { padding: 6px 14px; }
+    .hud .star-count { font-size: 20px; }
+    #pad { font-size: 48px; }
+    #frog { font-size: 38px; top: calc(50% - 44px); }
+    #tap-hint { font-size: 14px; bottom: 8px; }
+    .medal { font-size: 64px; }
+    .result-stars { font-size: 34px; }
+    .icon-btn { width: 64px; height: 64px; font-size: 30px; }
+    .moon { font-size: 56px; }
+    .oyasumi-text { font-size: 18px; }
+    #oyasumi { gap: 12px; padding: 16px; }
+    .cd-num { font-size: 56px; }
+    .cd-num.go { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <button class="sound-toggle" id="btn-sound">🔊</button>
+
+  <!-- スタート -->
+  <section id="start" class="screen active">
+    <a class="back-btn" href="../../" aria-label="えらぶがめんにもどる">⬅️</a>
+    <div class="start-head">
+      <div class="title">ぴたっとストップ</div>
+      <div class="subtitle">4〜6さい向け タイミングゲーム(おうちのかたへ: 文字が読めなくても遊べます)</div>
+    </div>
+    <div class="tickets-box">きょうは あと <span class="balloons" id="tickets">🎈🎈🎈</span></div>
+    <div class="rule-card">
+      <div class="rule-row"><span>🐸 →→</span><span>🪷</span><span>で 👆ピタッ!</span></div>
+      <div class="rule-note">
+        カエルさんが いったりきたり。<br>
+        はっぱの うえに きたら タッチして とめてあげよう!<br>
+        まんなかで とめられたら ✨ダブルはなまる✨
+      </div>
+    </div>
+    <div class="level-label">どれであそぶ?</div>
+    <div class="levels">
+      <button class="level-btn" data-level="l1">
+        <span class="stars">⭐</span><span>🐢 ゆっくり</span><span class="lb-best" id="best-l1">⭐0</span>
+      </button>
+      <button class="level-btn" data-level="l2">
+        <span class="stars">⭐⭐</span><span>🐇 はやい</span><span class="lb-best" id="best-l2">⭐0</span>
+      </button>
+      <button class="level-btn" data-level="l3">
+        <span class="stars">⭐⭐⭐</span><span>🐆 すっごくはやい</span><span class="lb-best" id="best-l3">⭐0</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ゲーム -->
+  <section id="game" class="screen">
+    <div class="hud">
+      <div class="star-count" id="star-count">⭐ 0</div>
+      <div class="tries" id="tries"></div>
+    </div>
+    <div id="field">
+      <div id="lane"></div>
+      <div id="pad">🪷</div>
+      <div id="frog">🐸</div>
+      <div id="judge"></div>
+      <div id="tap-hint">🪷のうえで タッチ!</div>
+      <div class="countdown hidden" id="countdown">
+        <div class="cd-num" id="cd-num"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 結果 -->
+  <section id="result" class="screen">
+    <div class="medal" id="medal">🥇</div>
+    <div class="result-stars" id="result-stars">⭐ 0</div>
+    <div class="cheer" id="cheer">すごい!</div>
+    <div class="result-btns">
+      <button class="icon-btn" id="btn-retry">🔁</button>
+      <button class="icon-btn" id="btn-home">🏠</button>
+    </div>
+    <div class="tickets-box" id="result-tickets"></div>
+  </section>
+
+  <!-- おやすみ -->
+  <section id="oyasumi" class="screen">
+    <div class="moon">🌙</div>
+    <div class="sleepers">🐸💤 🪷💤</div>
+    <div class="oyasumi-text">きょうのぶんは おしまい!<br>またあしたね</div>
+    <button class="icon-btn" id="btn-oyasumi-home">🏠</button>
+  </section>
+
+</div>
+
+<script src="../../shared/tickets.js"></script>
+<script src="../../shared/sound.js"></script>
+<script>
+(() => {
+  // speed は「レーン幅ぶん / 秒」。padW はレーン幅に対するはっぱの当たり判定の割合。
+  // movePad が true のレベルは1回ごとにはっぱの場所も変わる。
+  const LEVELS = {
+    l1: { speed: 0.35, padW: 0.24, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
+    l2: { speed: 0.55, padW: 0.17, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
+    l3: { speed: 0.80, padW: 0.12, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
+  };
+
+  const $ = id => document.getElementById(id);
+  const screens = { start: $('start'), game: $('game'), result: $('result'), oyasumi: $('oyasumi') };
+  const frog = $('frog'), pad = $('pad'), judge = $('judge');
+
+  let bests = { l1: 0, l2: 0, l3: 0 };
+  let state = null;
+  let rafId = null;
+
+  // ---------- サウンド(shared/sound.js の KidsSound。ON/OFFは全アプリ共通) ----------
+  const sndGood    = () => { KidsSound.tone(660, 0.12, 0.2, 'sine'); KidsSound.tone(990, 0.15, 0.2, 'sine', 0.09); };
+  const sndPerfect = () => { [660, 880, 1320].forEach((f, i) => KidsSound.tone(f, 0.14, 0.2, 'sine', i * 0.08)); };
+  const sndSplash  = () => { KidsSound.tone(300, 0.15, 0.14, 'sine'); KidsSound.tone(180, 0.3, 0.12, 'sine', 0.1); };
+  const sndEnd     = () => { [523, 659, 784, 1047].forEach((f, i) => KidsSound.tone(f, 0.2, 0.2, 'sine', i * 0.15)); };
+
+  // ---------- 保存 ----------
+  function loadBests() {
+    try {
+      const v = localStorage.getItem('pitatto-bests');
+      if (v) Object.assign(bests, JSON.parse(v));
+    } catch (e) {}
+    renderBests();
+  }
+  function saveBests() {
+    try { localStorage.setItem('pitatto-bests', JSON.stringify(bests)); } catch (e) {}
+  }
+  function renderBests() {
+    for (const k of Object.keys(LEVELS)) $('best-' + k).textContent = '⭐' + (bests[k] || 0);
+  }
+
+  // ---------- 1日にあそべる回数(🎈チケット / あそび共通ストア) ----------
+  const remaining = () => KidsTickets.remaining();
+  function renderTickets() {
+    $('tickets').textContent = remaining() > 0 ? '🎈'.repeat(remaining()) : 'なし 💤';
+  }
+  function tryStart(levelKey) {
+    if (!KidsTickets.useOne()) { renderTickets(); show('oyasumi'); return; }
+    renderTickets();
+    startRound(levelKey);
+  }
+
+  function show(name) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ---------- ラウンド ----------
+  function newState(levelKey) {
+    return {
+      levelKey, cfg: LEVELS[levelKey],
+      stars: 0, tryNo: 0, results: [],
+      padC: 0.5,           // はっぱの中心(0〜1)
+      pos: 0,              // カエルの位置(0〜1)
+      t0: 0, offset: 0,    // 三角波の基準時刻と位相
+      moving: false, done: false,
+    };
+  }
+  function renderHud() {
+    $('star-count').textContent = '⭐ ' + state.stars;
+    const t = $('tries');
+    t.innerHTML = '';
+    for (let i = 0; i < state.cfg.tries; i++) {
+      const s = document.createElement('span');
+      const r = state.results[i];
+      s.textContent = r === undefined ? '🪷' : (r ? '⭕' : '💦');
+      if (r === true) s.classList.add('hit');
+      if (r === false) s.classList.add('miss');
+      t.appendChild(s);
+    }
+  }
+  // 0→1→0 をくりかえす三角波でカエルを往復させる
+  function frogPos(now) {
+    const x = ((now - state.t0) / 1000 * state.cfg.speed + state.offset) % 2;
+    return x < 1 ? x : 2 - x;
+  }
+  function place(el, p) { el.style.left = (6 + p * 88) + '%'; } // レーンは左右6%あき
+
+  function newTry() {
+    if (state.cfg.movePad || state.tryNo === 0) {
+      // はっぱが端に寄りすぎると簡単になりすぎるので中寄りに置く
+      state.padC = 0.2 + Math.random() * 0.6;
+    }
+    place(pad, state.padC);
+    frog.classList.remove('hop', 'splash-down');
+    frog.style.top = '';
+    // 毎回ちがう位相・向きで開始(「なんとなく同じリズム」で当たるのを防ぐ)
+    state.t0 = performance.now();
+    state.offset = Math.random() * 2;
+    state.moving = true;
+    tick();
+  }
+  function tick() {
+    if (!state.moving) return;
+    state.pos = frogPos(performance.now());
+    place(frog, state.pos);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function showJudge(ch) {
+    judge.textContent = ch;
+    judge.classList.remove('show'); void judge.offsetWidth;
+    judge.classList.add('show');
+  }
+
+  function stopNow() {
+    if (!state || !state.moving || state.done) return;
+    state.moving = false;
+    cancelAnimationFrame(rafId);
+    const off = Math.abs(state.pos - state.padC);
+    const half = state.cfg.padW / 2;
+    const hit = off <= half;
+    const perfect = off <= half * 0.35;
+    state.results[state.tryNo] = hit;
+    if (hit) {
+      state.stars++;
+      frog.classList.add('hop'); // はっぱの上にぴょん
+      if (perfect) { showJudge('✨'); sndPerfect(); }
+      else { showJudge('⭕'); sndGood(); }
+    } else {
+      frog.classList.add('splash-down'); // ぽちゃん
+      showJudge('💦');
+      sndSplash();
+      if (navigator.vibrate) navigator.vibrate(60);
+    }
+    state.tryNo++;
+    renderHud();
+    setTimeout(() => {
+      if (!state || state.done) return;
+      if (state.tryNo >= state.cfg.tries) { endRound(); return; }
+      newTry();
+    }, 950);
+  }
+
+  function runCountdown(done) {
+    const cd = $('countdown'), num = $('cd-num');
+    cd.classList.remove('hidden');
+    const seq = ['3', '2', '1', 'スタート!'];
+    let i = 0;
+    const step = () => {
+      const isGo = i === seq.length - 1;
+      num.textContent = seq[i];
+      num.classList.toggle('go', isGo);
+      num.classList.remove('zoom'); void num.offsetWidth; num.classList.add('zoom');
+      KidsSound.tone(isGo ? 880 : 440, isGo ? 0.3 : 0.12, 0.2, 'sine');
+      i++;
+      setTimeout(() => {
+        if (i < seq.length) { step(); return; }
+        cd.classList.add('hidden');
+        done();
+      }, isGo ? 700 : 800);
+    };
+    step();
+  }
+
+  function startRound(levelKey) {
+    KidsSound.ensure();
+    state = newState(levelKey);
+    renderHud();
+    place(frog, 0); place(pad, 0.5);
+    show('game');
+    runCountdown(() => newTry());
+  }
+
+  function endRound() {
+    state.done = true;
+    cancelAnimationFrame(rafId);
+
+    const k = state.levelKey;
+    if (state.stars > (bests[k] || 0)) { bests[k] = state.stars; saveBests(); }
+
+    const m = state.cfg.medals;
+    const s = state.stars;
+    let medal = '🌱', cheer = 'がんばったね!';
+    if (s >= m[3])      { medal = '🏆'; cheer = 'チャンピオン!!'; }
+    else if (s >= m[2]) { medal = '🥇'; cheer = 'すごい!!'; }
+    else if (s >= m[1]) { medal = '🥈'; cheer = 'じょうず!'; }
+    else if (s >= m[0]) { medal = '🥉'; cheer = 'いいね!'; }
+    $('medal').textContent = medal;
+    $('result-stars').textContent = '⭐ ' + s;
+    $('cheer').textContent = cheer;
+    $('result-tickets').textContent = remaining() > 0
+      ? 'あと ' + '🎈'.repeat(remaining())
+      : '🌙 きょうのぶんは おしまい';
+    sndEnd();
+    show('result');
+  }
+
+  // ---------- イベント ----------
+  $('field').addEventListener('pointerdown', stopNow);
+  document.querySelectorAll('.level-btn').forEach(btn => {
+    btn.addEventListener('click', () => tryStart(btn.dataset.level));
+  });
+  $('btn-retry').addEventListener('click', () => tryStart(state.levelKey));
+  $('btn-home').addEventListener('click', () => { renderBests(); renderTickets(); show('start'); });
+  $('btn-oyasumi-home').addEventListener('click', () => { renderTickets(); show('start'); });
+  function renderSound() {
+    $('btn-sound').textContent = KidsSound.enabled() ? '🔊' : '🔇';
+  }
+  $('btn-sound').addEventListener('click', () => {
+    KidsSound.setEnabled(!KidsSound.enabled());
+    renderSound();
+    if (KidsSound.enabled()) sndGood();
+  });
+
+  // ハブから戻ってきたとき(bfcache 復帰含む)に残数・音設定を最新化
+  window.addEventListener('pageshow', () => { renderTickets(); renderSound(); });
+
+  loadBests();
+  renderTickets();
+  renderSound();
+})();
+
+// ---------- PWA: Service Worker ----------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('../../sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

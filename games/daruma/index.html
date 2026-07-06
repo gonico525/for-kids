@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>だるまさんがころんだ — からだをうごかすゲーム</title>
+<link rel="manifest" href="../../manifest.webmanifest">
+<meta name="theme-color" content="#BDE8FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="だるまさんがころんだ">
+<link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
+<style>
+  :root {
+    --sky: #BDE8FF;
+    --sky-deep: #8FD4FF;
+    --card: #FFFFFF;
+    --ink: #3A3A3A;
+    --go-bg: #7ED957;
+    --go-deep: #5CBF3E;
+    --stop-bg: #FF8B7B;
+    --stop-deep: #F26B58;
+    --sun: #FFD644;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body {
+    background: linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 100%);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+    display: flex; justify-content: center;
+  }
+  #app {
+    position: relative;
+    width: 100%; max-width: 430px; min-height: 100dvh;
+    display: flex; flex-direction: column;
+    padding: calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+  }
+  .screen { flex: 1; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+  button { font-family: inherit; border: none; cursor: pointer; background: none; }
+
+  /* ---------- スタート ---------- */
+  #start { justify-content: center; text-align: center; gap: 16px; }
+  .title { font-size: 32px; font-weight: 900; color: #2E7D32; text-shadow: 2px 2px 0 #fff; }
+  .subtitle { font-size: 12px; color: #4E6E58; }
+  .rule-card {
+    background: var(--card); border-radius: 20px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.08);
+  }
+  .rule-row {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 30px; padding: 8px; border-radius: 14px;
+  }
+  .rule-row.go { background: #E4F6E6; }
+  .rule-row.stop { background: #FFECE8; }
+  .rule-note { font-size: 12px; color: #777; line-height: 1.7; }
+  .level-label { font-size: 14px; font-weight: 800; color: #2E7D32; }
+  .levels { display: flex; flex-direction: column; gap: 10px; }
+  .level-btn {
+    background: var(--card); border-radius: 20px; padding: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 24px; box-shadow: 0 5px 0 rgba(0,0,0,0.1);
+    transition: transform 0.08s ease;
+  }
+  .level-btn:active { transform: scale(0.96); }
+  .level-btn .stars { letter-spacing: 2px; }
+  .sound-toggle { position: absolute; top: 14px; right: 14px; font-size: 28px; z-index: 2; }
+  .back-btn { position: absolute; top: 14px; left: 14px; font-size: 28px; text-decoration: none; z-index: 2; }
+
+  /* ---------- ゲーム ---------- */
+  #game { gap: 10px; }
+  .stops-row {
+    display: flex; justify-content: center; gap: 8px;
+    background: var(--card); border-radius: 999px; padding: 8px 16px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+    font-size: 20px;
+  }
+  .stops-row .dot { opacity: 0.25; }
+  .stops-row .dot.done { opacity: 1; }
+  #stage {
+    flex: 1; position: relative; border-radius: 24px; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: linear-gradient(180deg, var(--go-bg) 0%, var(--go-deep) 100%);
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.12);
+    transition: background 0.15s;
+  }
+  #stage.freeze { background: linear-gradient(180deg, var(--stop-bg) 0%, var(--stop-deep) 100%); }
+  #prompt { font-size: min(24vh, 110px); line-height: 1.15; }
+  #prompt.thud { animation: thud 0.3s ease-out; }
+  @keyframes thud {
+    0% { transform: scale(1.6); }
+    60% { transform: scale(0.92); }
+    100% { transform: scale(1); }
+  }
+  #prompt-label {
+    font-size: 22px; font-weight: 900; color: #fff;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.2);
+  }
+  #dancers { display: flex; gap: 14px; font-size: 44px; }
+  #dancers span { display: inline-block; animation: dance 0.55s ease-in-out infinite alternate; }
+  #dancers span:nth-child(2) { animation-delay: 0.14s; }
+  #dancers span:nth-child(3) { animation-delay: 0.28s; }
+  #dancers span:nth-child(4) { animation-delay: 0.42s; }
+  @keyframes dance {
+    from { transform: translateY(0) rotate(-8deg); }
+    to   { transform: translateY(-16px) rotate(8deg); }
+  }
+  #stage.freeze #dancers span { animation-play-state: paused; }
+  .notes {
+    position: absolute; top: 12px; left: 0; right: 0;
+    display: flex; justify-content: space-around;
+    font-size: 26px; opacity: 0.85;
+  }
+  .notes span { animation: floatnote 1.4s ease-in-out infinite alternate; }
+  .notes span:nth-child(2) { animation-delay: 0.4s; }
+  .notes span:nth-child(3) { animation-delay: 0.8s; }
+  @keyframes floatnote {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-10px); }
+  }
+  #stage.freeze .notes { visibility: hidden; }
+  .countdown {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: rgba(0,0,0,0.3); border-radius: 24px;
+  }
+  .cd-num {
+    font-size: 88px; font-weight: 900; color: #fff; line-height: 1.2;
+    text-shadow: 0 5px 0 rgba(0,0,0,0.25);
+  }
+  .cd-num.go { font-size: 48px; color: var(--sun); }
+  .cd-num.zoom { animation: cdzoom 0.5s ease-out; }
+  @keyframes cdzoom { from { transform: scale(1.7); opacity: 0.2; } to { transform: scale(1); opacity: 1; } }
+
+  /* ---------- 結果 ---------- */
+  #result { justify-content: center; text-align: center; gap: 20px; }
+  .medal { font-size: 90px; line-height: 1; }
+  .cheer { font-size: 24px; font-weight: 900; color: #2E7D32; }
+  .self-stars-label { font-size: 15px; font-weight: 800; color: #4E6E58; }
+  .self-stars { display: flex; justify-content: center; gap: 6px; font-size: 34px; flex-wrap: wrap; }
+  .self-stars button { filter: grayscale(1); opacity: 0.45; transition: transform 0.1s; }
+  .self-stars button.lit { filter: none; opacity: 1; transform: scale(1.15); }
+  .result-btns { display: flex; justify-content: center; gap: 20px; }
+  .icon-btn {
+    background: var(--card); border-radius: 50%;
+    width: 84px; height: 84px; font-size: 40px;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.1);
+    transition: transform 0.08s ease;
+  }
+  .icon-btn:active { transform: scale(0.94); }
+
+  /* ---------- チケット ---------- */
+  .tickets-box {
+    background: var(--card); border-radius: 999px; padding: 10px 18px;
+    font-size: 15px; font-weight: 800; color: #4E6E58;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.08); align-self: center;
+  }
+  .tickets-box .balloons { font-size: 20px; letter-spacing: 2px; }
+
+  /* ---------- おやすみ ---------- */
+  #oyasumi {
+    justify-content: center; align-items: center; text-align: center; gap: 22px;
+    background: linear-gradient(180deg, #2B3A67 0%, #1B2447 100%);
+    border-radius: 24px; padding: 24px; color: #F5F2E8;
+  }
+  .moon { font-size: 84px; animation: floaty 3s ease-in-out infinite; }
+  .sleepers { font-size: 32px; letter-spacing: 4px; }
+  .oyasumi-text { font-size: 22px; font-weight: 900; line-height: 1.8; }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+  .hidden { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #dancers span { animation: none; }
+    .notes span { animation: none; }
+    #prompt.thud { animation: none; }
+    .cd-num.zoom { animation: none; }
+    .moon { animation: none; }
+  }
+
+  /* ---------- タブレット(縦横共通: 大きめに表示) ---------- */
+  @media (min-width: 600px) and (min-height: 500px) {
+    #app { max-width: 560px; }
+    .title { font-size: 42px; }
+    .subtitle { font-size: 14px; }
+    .rule-note { font-size: 14px; }
+    .level-btn { font-size: 28px; padding: 20px; }
+    .tickets-box { font-size: 17px; }
+    .sound-toggle, .back-btn { font-size: 34px; }
+    #dancers { font-size: 60px; }
+    #prompt-label { font-size: 28px; }
+    .medal { font-size: 120px; }
+    .cheer { font-size: 30px; }
+    .self-stars { font-size: 44px; }
+    .icon-btn { width: 100px; height: 100px; font-size: 48px; }
+    .oyasumi-text { font-size: 26px; }
+  }
+
+  /* ---------- 横画面: スタートを2カラムに ---------- */
+  @media (orientation: landscape) and (min-width: 640px) {
+    #app { max-width: 900px; }
+    #start.active {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "head    head"
+        "tickets label"
+        "rule    levels";
+      gap: 12px 24px;
+      align-content: center;
+    }
+    .start-head { grid-area: head; }
+    #start .tickets-box { grid-area: tickets; justify-self: center; align-self: center; }
+    #start .rule-card { grid-area: rule; align-self: center; justify-content: center; }
+    #start .level-label { grid-area: label; align-self: end; text-align: center; }
+    #start .levels { grid-area: levels; align-self: center; }
+  }
+
+  /* ---------- 横画面で高さが低い場合: 詰めて収める ---------- */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #app { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+    #game { gap: 6px; }
+    #start.active, #result.active { gap: 10px; }
+    .title { font-size: 26px; }
+    .rule-card { padding: 10px; gap: 6px; }
+    .rule-row { font-size: 22px; }
+    .level-btn { padding: 10px 16px; font-size: 20px; }
+    #prompt { font-size: 20vh; }
+    #prompt-label { font-size: 18px; }
+    #dancers { font-size: 34px; gap: 10px; }
+    .medal { font-size: 64px; }
+    .self-stars { font-size: 26px; }
+    .icon-btn { width: 64px; height: 64px; font-size: 30px; }
+    .moon { font-size: 56px; }
+    .oyasumi-text { font-size: 18px; }
+    #oyasumi { gap: 12px; padding: 16px; }
+    .cd-num { font-size: 56px; }
+    .cd-num.go { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <button class="sound-toggle" id="btn-sound">🔊</button>
+
+  <!-- スタート -->
+  <section id="start" class="screen active">
+    <a class="back-btn" href="../../" aria-label="えらぶがめんにもどる">⬅️</a>
+    <div class="start-head">
+      <div class="title">だるまさんがころんだ</div>
+      <div class="subtitle">スマホを たてかけて、はなれて おどってね(おうちのかたへ: 全身で遊ぶゲームです。いっしょに遊ぶともっと楽しい!)</div>
+    </div>
+    <div class="tickets-box">きょうは あと <span class="balloons" id="tickets">🎈🎈🎈</span></div>
+    <div class="rule-card">
+      <div class="rule-row go"><span>🎵</span> → <span>💃🕺 うごく!</span></div>
+      <div class="rule-row stop"><span>🗿</span> → <span>🧍 ピタッ!</span></div>
+      <div class="rule-note">
+        おんがくが なってるあいだは おどろう!<br>
+        🗿がでて おんがくが とまったら、うごいちゃダメ!<br>
+        ※スマホは さわらず、みるだけで あそべます
+      </div>
+    </div>
+    <div class="level-label">どれであそぶ?</div>
+    <div class="levels">
+      <button class="level-btn" data-level="m1">
+        <span class="stars">⭐</span><span>🎵 ふつう</span><span></span>
+      </button>
+      <button class="level-btn" data-level="m2">
+        <span class="stars">⭐⭐</span><span>🐘 まねっこ</span><span></span>
+      </button>
+      <button class="level-btn" data-level="m3">
+        <span class="stars">⭐⭐⭐</span><span>⚡ はやいおに</span><span></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ゲーム -->
+  <section id="game" class="screen">
+    <div class="stops-row" id="stops-row"></div>
+    <div id="stage">
+      <div class="notes"><span>🎵</span><span>🎶</span><span>🎵</span></div>
+      <div id="prompt">💃</div>
+      <div id="prompt-label">おどろう!</div>
+      <div id="dancers"><span>🐰</span><span>🐶</span><span>🐱</span><span>🐥</span></div>
+      <div class="countdown hidden" id="countdown">
+        <div class="cd-num" id="cd-num"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 結果 -->
+  <section id="result" class="screen">
+    <div class="medal">🎉</div>
+    <div class="cheer">おつかれさま!</div>
+    <div class="self-stars-label">ピタッと とまれたかな? ⭐をつけてね</div>
+    <div class="self-stars" id="self-stars"></div>
+    <div class="result-btns">
+      <button class="icon-btn" id="btn-retry">🔁</button>
+      <button class="icon-btn" id="btn-home">🏠</button>
+    </div>
+    <div class="tickets-box" id="result-tickets"></div>
+  </section>
+
+  <!-- おやすみ -->
+  <section id="oyasumi" class="screen">
+    <div class="moon">🌙</div>
+    <div class="sleepers">🐰💤 🐶💤 🐱💤 🐥💤</div>
+    <div class="oyasumi-text">きょうのぶんは おしまい!<br>またあしたね</div>
+    <button class="icon-btn" id="btn-oyasumi-home">🏠</button>
+  </section>
+
+</div>
+
+<script src="../../shared/tickets.js"></script>
+<script src="../../shared/sound.js"></script>
+<script>
+(() => {
+  // dance/freeze はフェーズの長さの範囲(ms)。長さがランダムなのが「いつ止まるか分からない」
+  // という抑制の練習のキモなので、固定値にしないこと。
+  const LEVELS = {
+    m1: { stops: 6, dance: [4000, 7000], freeze: [2000, 3500], noteGap: 240, moves: [['💃','おどろう!']] },
+    m2: { stops: 6, dance: [4000, 7000], freeze: [2000, 3500], noteGap: 240,
+          moves: [['🐰','ぴょんぴょん'],['🐘','のっしのっし'],['🐢','ゆーっくり'],['🦶','あしぶみ'],['🙌','ばんざい'],['🌀','ぐるぐる']] },
+    m3: { stops: 8, dance: [2500, 5000], freeze: [3000, 5000], noteGap: 200, moves: [['💃','おどろう!']] },
+  };
+  // 明るいループメロディ(ドレミソラのペンタトニック)
+  const MELODY = [523, 659, 784, 659, 880, 784, 659, 587];
+
+  const $ = id => document.getElementById(id);
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const screens = { start: $('start'), game: $('game'), result: $('result'), oyasumi: $('oyasumi') };
+  const stage = $('stage'), prompt = $('prompt'), promptLabel = $('prompt-label');
+
+  let state = null;   // {cfg, stopsDone, lastMove}
+  let roundId = 0;
+  let phaseTimer = null;
+  let musicTimer = null, noteI = 0;
+
+  // ---------- サウンド(shared/sound.js の KidsSound。ON/OFFは全アプリ共通) ----------
+  function startMusic(gap) {
+    stopMusic();
+    const step = () => {
+      const f = MELODY[noteI % MELODY.length];
+      KidsSound.tone(f, 0.15, 0.13, 'triangle');
+      if (noteI % 2 === 0) KidsSound.tone(f / 2, 0.2, 0.05, 'sine'); // うっすらベース
+      noteI++;
+      musicTimer = setTimeout(step, gap);
+    };
+    step();
+  }
+  function stopMusic() { clearTimeout(musicTimer); musicTimer = null; }
+  const sndStop   = () => { KidsSound.tone(880, 0.07, 0.2, 'square'); KidsSound.tone(330, 0.25, 0.16, 'square', 0.07); };
+  const sndResume = () => { KidsSound.tone(523, 0.1, 0.15, 'sine'); KidsSound.tone(784, 0.15, 0.15, 'sine', 0.09); };
+  const sndEnd    = () => { [523, 659, 784, 1047].forEach((f, i) => KidsSound.tone(f, 0.2, 0.2, 'sine', i * 0.15)); };
+  const sndGood   = () => { KidsSound.tone(660, 0.12, 0.2, 'sine'); KidsSound.tone(990, 0.15, 0.2, 'sine', 0.09); };
+
+  // ---------- 1日にあそべる回数(🎈チケット / あそび共通ストア) ----------
+  const remaining = () => KidsTickets.remaining();
+  function renderTickets() {
+    $('tickets').textContent = remaining() > 0 ? '🎈'.repeat(remaining()) : 'なし 💤';
+  }
+  function tryStart(levelKey) {
+    if (!KidsTickets.useOne()) { renderTickets(); show('oyasumi'); return; }
+    renderTickets();
+    startRound(levelKey);
+  }
+
+  function show(name) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ---------- ラウンド進行 ----------
+  function renderStops() {
+    const row = $('stops-row');
+    row.innerHTML = '';
+    for (let i = 0; i < state.cfg.stops; i++) {
+      const d = document.createElement('span');
+      d.className = 'dot' + (i < state.stopsDone ? ' done' : '');
+      d.textContent = '🗿';
+      row.appendChild(d);
+    }
+  }
+
+  function dancePhase() {
+    const myId = roundId;
+    stage.classList.remove('freeze');
+    // まねっこモードは毎回ちがう動きのお題(同じお題は続けない)
+    let mv;
+    do { mv = pick(state.cfg.moves); } while (state.cfg.moves.length > 1 && mv === state.lastMove);
+    state.lastMove = mv;
+    prompt.textContent = mv[0];
+    prompt.classList.remove('thud');
+    promptLabel.textContent = mv[1];
+    startMusic(state.cfg.noteGap);
+    phaseTimer = setTimeout(() => { if (myId === roundId) freezePhase(); }, rnd(...state.cfg.dance));
+  }
+
+  function freezePhase() {
+    const myId = roundId;
+    stopMusic();
+    sndStop();
+    if (navigator.vibrate) navigator.vibrate(120);
+    stage.classList.add('freeze');
+    prompt.textContent = '🗿';
+    prompt.classList.remove('thud'); void prompt.offsetWidth; prompt.classList.add('thud');
+    promptLabel.textContent = 'ピタッ!';
+    phaseTimer = setTimeout(() => {
+      if (myId !== roundId) return;
+      state.stopsDone++;
+      renderStops();
+      if (state.stopsDone >= state.cfg.stops) { endRound(); return; }
+      sndResume();
+      dancePhase();
+    }, rnd(...state.cfg.freeze));
+  }
+
+  function runCountdown(done) {
+    const cd = $('countdown'), num = $('cd-num');
+    cd.classList.remove('hidden');
+    const seq = ['3', '2', '1', 'スタート!'];
+    let i = 0;
+    const myId = roundId;
+    const step = () => {
+      if (myId !== roundId) return;
+      const isGo = i === seq.length - 1;
+      num.textContent = seq[i];
+      num.classList.toggle('go', isGo);
+      num.classList.remove('zoom'); void num.offsetWidth; num.classList.add('zoom');
+      KidsSound.tone(isGo ? 880 : 440, isGo ? 0.3 : 0.12, 0.2, 'sine');
+      i++;
+      setTimeout(() => {
+        if (myId !== roundId) return;
+        if (i < seq.length) { step(); return; }
+        cd.classList.add('hidden');
+        done();
+      }, isGo ? 700 : 800);
+    };
+    step();
+  }
+
+  function startRound(levelKey) {
+    KidsSound.ensure();
+    roundId++;
+    state = { levelKey, cfg: LEVELS[levelKey], stopsDone: 0, lastMove: null };
+    renderStops();
+    stage.classList.remove('freeze');
+    prompt.textContent = '💃';
+    promptLabel.textContent = 'じゅんびして!';
+    show('game');
+    runCountdown(() => dancePhase());
+  }
+
+  function stopRound() {
+    roundId++;
+    clearTimeout(phaseTimer);
+    stopMusic();
+  }
+
+  function endRound() {
+    stopRound();
+    sndEnd();
+    // 「ピタッとできたかな?」の⭐は子ども(かおうちの人)が自分でつける。
+    // 採点機ではなくふりかえりの遊びなので、正誤判定はしない。
+    const box = $('self-stars');
+    box.innerHTML = '';
+    for (let i = 0; i < state.cfg.stops; i++) {
+      const b = document.createElement('button');
+      b.textContent = '⭐';
+      b.addEventListener('click', () => { b.classList.toggle('lit'); sndGood(); });
+      box.appendChild(b);
+    }
+    $('result-tickets').textContent = remaining() > 0
+      ? 'あと ' + '🎈'.repeat(remaining())
+      : '🌙 きょうのぶんは おしまい';
+    show('result');
+  }
+
+  // ---------- イベント ----------
+  document.querySelectorAll('.level-btn').forEach(btn => {
+    btn.addEventListener('click', () => tryStart(btn.dataset.level));
+  });
+  $('btn-retry').addEventListener('click', () => tryStart(state.levelKey));
+  $('btn-home').addEventListener('click', () => { renderTickets(); show('start'); });
+  $('btn-oyasumi-home').addEventListener('click', () => { renderTickets(); show('start'); });
+  function renderSound() {
+    $('btn-sound').textContent = KidsSound.enabled() ? '🔊' : '🔇';
+  }
+  $('btn-sound').addEventListener('click', () => {
+    KidsSound.setEnabled(!KidsSound.enabled());
+    renderSound();
+    if (KidsSound.enabled()) sndGood();
+  });
+
+  // ハブから戻ってきたとき(bfcache 復帰含む)に残数・音設定を最新化
+  window.addEventListener('pageshow', () => { renderTickets(); renderSound(); });
+  // 画面を閉じた/隠したら音楽が鳴りっぱなしにならないように止める
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && screens.game.classList.contains('active')) { stopRound(); show('start'); }
+  });
+
+  renderTickets();
+  renderSound();
+})();
+
+// ---------- PWA: Service Worker ----------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('../../sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>やじるしめいろ — かんがえるべんきょう</title>
+<meta name="theme-color" content="#DCF0D2">
+<link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
+<style>
+  :root{
+    --bg:#DCF0D2;
+    --ink:#3d5233;
+    --paper:#fbfff5;
+    --line:#7fa86b;
+    --grass1:#c9e7b4;
+    --grass2:#bfe0a8;
+    --accent:#e8703a;
+    --good:#4e8f5a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;}
+  body{
+    font-family:'Hiragino Maru Gothic ProN','Hiragino Sans','Noto Sans JP',sans-serif;
+    background:
+      radial-gradient(ellipse at 50% -20%, #ecf8e3 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    user-select:none;-webkit-user-select:none;
+    touch-action:manipulation;
+    display:flex;flex-direction:column;
+  }
+
+  /* ---------- top bar ---------- */
+  #bar{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:8px;
+    padding:6px 10px;justify-content:center;flex-wrap:wrap;
+  }
+  #title{font-weight:800;font-size:14px;letter-spacing:.1em;margin-right:4px;white-space:nowrap;}
+  .btn{
+    font-family:inherit;font-weight:700;font-size:13px;
+    color:var(--ink);background:var(--paper);
+    border:2px solid var(--line);border-radius:999px;
+    padding:6px 12px;box-shadow:0 2px 0 var(--line);
+    cursor:pointer;white-space:nowrap;transition:transform .08s;
+  }
+  .btn:active{transform:translateY(2px);box-shadow:0 0 0 var(--line);}
+  a.btn{text-decoration:none;display:inline-flex;align-items:center;}
+  .chip{
+    font-family:inherit;font-weight:700;font-size:12px;
+    color:var(--ink);background:var(--paper);
+    border:2px solid var(--line);border-radius:999px;
+    padding:5px 10px;cursor:pointer;
+  }
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  #streak{
+    font-weight:800;font-size:13px;
+    background:#f4d47a;border:2px solid #c9a83f;border-radius:999px;
+    padding:5px 10px;white-space:nowrap;
+  }
+
+  /* ---------- stage / board ---------- */
+  #main{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;min-width:0;}
+  #stage{
+    flex:1 1 auto;position:relative;
+    display:flex;align-items:center;justify-content:center;
+    padding:4px 12px;min-height:0;min-width:0;
+  }
+  #board{
+    position:relative;
+    border-radius:14px;overflow:hidden;
+    box-shadow:0 6px 16px rgba(61,82,51,.25), inset 0 0 0 3px rgba(61,82,51,.25);
+    display:grid;
+  }
+  .cell{
+    display:flex;align-items:center;justify-content:center;
+    background:var(--grass1);
+    line-height:1;
+  }
+  .cell.alt{background:var(--grass2);}
+  .cell.start{
+    background-image:radial-gradient(circle, rgba(255,255,255,.55) 0 38%, transparent 42%);
+  }
+  #chara{
+    position:absolute;z-index:5;
+    display:flex;align-items:center;justify-content:center;
+    line-height:1;pointer-events:none;
+    transition:left .3s ease, top .3s ease;
+    will-change:left,top;
+  }
+  #chara.bump{animation:bump .4s;}
+  @keyframes bump{
+    0%,100%{transform:translate(0,0);}
+    30%{transform:translate(var(--bx,0), var(--by,0));}
+    60%{transform:translate(0,0) rotate(-8deg);}
+  }
+  #chara.happy{animation:happy .6s ease-in-out 2;}
+  @keyframes happy{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-30%);}
+  }
+
+  /* ---------- ⭕スタンプ ---------- */
+  #stamp{
+    position:absolute;inset:0;z-index:20;
+    display:flex;align-items:center;justify-content:center;
+    font-size:min(30vh,150px);
+    pointer-events:none;opacity:0;
+  }
+  #stamp.show{animation:stampPop 1.2s ease-out forwards;}
+  @keyframes stampPop{
+    0%{opacity:0;transform:scale(.3);}
+    22%{opacity:1;transform:scale(1.15);}
+    40%{transform:scale(1);}
+    70%{opacity:1;}
+    100%{opacity:0;transform:scale(1);}
+  }
+
+  /* ---------- program strip + pad ---------- */
+  #side{
+    flex:0 0 auto;
+    display:flex;flex-direction:column;gap:6px;
+    padding:4px 10px calc(12px + env(safe-area-inset-bottom));
+  }
+  #prog{
+    display:flex;justify-content:center;gap:5px;flex-wrap:wrap;
+    min-height:44px;align-items:center;
+  }
+  .slot{
+    width:clamp(36px,8.6vw,48px);height:clamp(36px,8.6vw,48px);
+    display:flex;align-items:center;justify-content:center;
+    font-size:clamp(20px,5vw,28px);line-height:1;
+    background:rgba(255,255,255,.5);
+    border:2px dashed var(--line);border-radius:12px;
+  }
+  .slot.filled{background:var(--paper);border-style:solid;box-shadow:0 2px 0 var(--line);}
+  .slot.now{border-color:var(--accent);border-style:solid;transform:scale(1.1);}
+  .slot.bad{background:#f6c8b5;border-color:#c2593a;animation:slotShake .3s;}
+  @keyframes slotShake{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-5px);}
+    75%{transform:translateX(5px);}
+  }
+  #pad{
+    display:flex;justify-content:center;align-items:center;
+    gap:10px;flex-wrap:wrap;
+  }
+  .key{
+    font-family:inherit;
+    width:clamp(52px,12vw,72px);height:clamp(52px,12vw,72px);
+    font-size:clamp(26px,6vw,38px);line-height:1;
+    background:var(--paper);color:var(--ink);
+    border:2px solid var(--line);border-radius:18px;
+    box-shadow:0 3px 0 var(--line);
+    cursor:pointer;
+  }
+  .key:active{transform:translateY(3px);box-shadow:0 0 0 var(--line);}
+  .key:disabled{opacity:.4;}
+  #goBtn{background:var(--good);border-color:#39693f;box-shadow:0 3px 0 #39693f;color:#fff;}
+  #goBtn:active{box-shadow:0 0 0 #39693f;}
+
+  /* ---------- タブレット ---------- */
+  @media (min-width:600px) and (min-height:500px){
+    #title{font-size:16px;}
+    .chip{font-size:14px;padding:6px 14px;}
+  }
+
+  /* ---------- 横画面で高さが低い場合: 盤面の右に操作を置く ---------- */
+  @media (orientation:landscape) and (max-height:500px){
+    #main{flex-direction:row;}
+    #side{justify-content:center;width:40%;max-width:340px;}
+    #prog{min-height:40px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #chara{transition:none;}
+    #chara.bump,#chara.happy{animation:none;}
+    .slot.bad{animation:none;}
+    #stamp.show{animation:stampFade 1.2s forwards;}
+  }
+  @keyframes stampFade{
+    0%{opacity:0;}
+    15%{opacity:1;}
+    70%{opacity:1;}
+    100%{opacity:0;}
+  }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <a class="btn" href="../../" aria-label="えらぶがめんにもどる">🏠</a>
+  <button class="btn" id="soundBtn" aria-label="おとのオンオフ">🔊</button>
+  <div id="title">やじるしめいろ</div>
+  <button class="chip" data-lv="1">①すぐうごく</button>
+  <button class="chip" data-lv="2">②ならべる</button>
+  <button class="chip" data-lv="3">③いわみち</button>
+  <button class="chip" data-lv="4">④ながいみち</button>
+  <span id="streak">⭐ 0</span>
+</div>
+
+<div id="main">
+  <div id="stage">
+    <div id="board"></div>
+    <div id="chara">🐰</div>
+    <div id="stamp"></div>
+  </div>
+  <div id="side">
+    <div id="prog"></div>
+    <div id="pad">
+      <button class="key" data-dir="L">⬅️</button>
+      <button class="key" data-dir="U">⬆️</button>
+      <button class="key" data-dir="D">⬇️</button>
+      <button class="key" data-dir="R">➡️</button>
+      <button class="key" id="delBtn">⌫</button>
+      <button class="key" id="goBtn">▶</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/sound.js"></script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const stage=$('stage'), board=$('board'), chara=$('chara');
+  const progEl=$('prog'), stamp=$('stamp');
+  const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const shuffle=a=>{const x=a.slice();for(let i=x.length-1;i>0;i--){const j=rnd(0,i);[x[i],x[j]]=[x[j],x[i]];}return x;};
+
+  /* ================= sound(shared/sound.js。ON/OFFは全アプリ共通) ================= */
+  const sTap  =()=>{ KidsSound.tone(620+Math.random()*120,0.08,0.12,'triangle'); };
+  const sStep =i=>{ KidsSound.tone(480+i*45,0.11,0.13,'triangle'); };
+  const sGood =()=>{ KidsSound.tone(660,0.12,0.14,'sine'); KidsSound.tone(880,0.18,0.14,'sine',0.1); KidsSound.tone(1320,0.22,0.10,'sine',0.2); };
+  const sOops =()=>{ KidsSound.tone(300,0.18,0.12,'sine'); KidsSound.tone(220,0.30,0.12,'sine',0.15); };
+  const sHmm  =()=>{ KidsSound.tone(392,0.15,0.12,'sine'); KidsSound.tone(311,0.25,0.12,'sine',0.18); };
+  const sUp   =()=>{ [523,659,784,1046].forEach((f,i)=>KidsSound.tone(f,0.15,0.13,'triangle',i*0.12)); };
+  const soundBtn=$('soundBtn');
+  function renderSound(){ soundBtn.textContent = KidsSound.enabled() ? '🔊' : '🔇'; }
+  soundBtn.onclick=()=>{ KidsSound.setEnabled(!KidsSound.enabled()); renderSound(); if(KidsSound.enabled()) sGood(); };
+  renderSound();
+  window.addEventListener('pageshow',renderSound);
+
+  /* ================= レベル設計 =================
+     ①は1タップ=1歩(矢印と動きの対応づけを学ぶ)。②から「先に全部ならべて▶で実行」
+     =計画してから動かす本番モード。③で岩(障害物)、④で道が長くなる。
+     len は正解の道の歩数、slots はならべられる矢印の数。 */
+  const LV={
+    1:{mode:'sugu', size:[4,4], len:[2,3], rocks:1, slots:0},
+    2:{mode:'plan', size:[4,4], len:[2,3], rocks:0, slots:4},
+    3:{mode:'plan', size:[5,4], len:[3,5], rocks:2, slots:6},
+    4:{mode:'plan', size:[5,5], len:[5,7], rocks:4, slots:8},
+  };
+  const DIR={L:[-1,0],R:[1,0],U:[0,-1],D:[0,1]};
+  const ARROW={L:'⬅️',R:'➡️',U:'⬆️',D:'⬇️'};
+
+  const state={lv:1, streak:0};
+  try{
+    const s=parseInt(localStorage.getItem('yajirushi-level'),10);
+    if(s>=1 && s<=4) state.lv=s;
+  }catch(e){}
+
+  let P=null;          // 今の迷路 {C,R,start,goal,rocks:Set}
+  let pos=[0,0];       // うさぎの現在マス
+  let prog=[];         // ならべた矢印 ['R','U',...]
+  let running=false, done=false, runId=0;
+  let cell=64;         // マス1個のピクセルサイズ
+
+  function setStreak(n){ state.streak=n; $('streak').textContent='⭐ '+n; }
+  function saveLevel(){ try{ localStorage.setItem('yajirushi-level', state.lv); }catch(e){} }
+  function showStamp(ch){
+    stamp.textContent=ch;
+    stamp.classList.remove('show'); void stamp.offsetWidth;
+    stamp.classList.add('show');
+  }
+
+  /* ================= 迷路生成 =================
+     スタートからランダムに「同じマスを通らない道」を歩いてゴールを決め、
+     岩は道以外のマスにだけ置く。作り方として必ず解ける迷路になる。 */
+  function genPuzzle(cfg){
+    const [C,R]=cfg.size;
+    for(let t=0;t<300;t++){
+      const len=rnd(cfg.len[0],cfg.len[1]);
+      let cur=[rnd(0,C-1),rnd(0,R-1)];
+      const seen=new Set([cur.join(',')]);
+      const cells=[cur];
+      let ok=true;
+      for(let i=0;i<len;i++){
+        const dirs=shuffle(Object.values(DIR));
+        let moved=false;
+        for(const d of dirs){
+          const nx=cur[0]+d[0], ny=cur[1]+d[1];
+          if(nx<0||ny<0||nx>=C||ny>=R) continue;
+          if(seen.has(nx+','+ny)) continue;
+          cur=[nx,ny]; seen.add(nx+','+ny); cells.push(cur); moved=true; break;
+        }
+        if(!moved){ ok=false; break; }
+      }
+      if(!ok) continue;
+      const free=[];
+      for(let y=0;y<R;y++)for(let x=0;x<C;x++){
+        if(!seen.has(x+','+y)) free.push([x,y]);
+      }
+      const rocks=new Set(shuffle(free).slice(0,cfg.rocks).map(c=>c.join(',')));
+      return {C,R,start:cells[0],goal:cells[cells.length-1],rocks};
+    }
+    // 万一の保険(ほぼ通らない)
+    return {C,R,start:[0,0],goal:[1,0],rocks:new Set()};
+  }
+
+  /* ================= 盤面 ================= */
+  function buildBoard(){
+    board.innerHTML='';
+    board.style.gridTemplateColumns=`repeat(${P.C},1fr)`;
+    for(let y=0;y<P.R;y++)for(let x=0;x<P.C;x++){
+      const d=document.createElement('div');
+      d.className='cell'+((x+y)%2?' alt':'');
+      if(x===P.start[0]&&y===P.start[1]) d.classList.add('start');
+      if(P.rocks.has(x+','+y)) d.textContent='🪨';
+      if(x===P.goal[0]&&y===P.goal[1]) d.textContent='🥕';
+      board.appendChild(d);
+    }
+  }
+  function computeLayout(){
+    if(!P) return;
+    const sw=stage.clientWidth-24, sh=stage.clientHeight-16;
+    cell=Math.max(30, Math.min(84, Math.floor(sw/P.C), Math.floor(sh/P.R)));
+    board.style.width =cell*P.C+'px';
+    board.style.height=cell*P.R+'px';
+    [...board.children].forEach(c=>{ c.style.fontSize=Math.round(cell*0.6)+'px'; });
+    chara.style.width=cell+'px';
+    chara.style.height=cell+'px';
+    chara.style.fontSize=Math.round(cell*0.62)+'px';
+    setPos(pos,false);
+  }
+  function setPos(p,animate){
+    pos=p;
+    const r=board.getBoundingClientRect(), s=stage.getBoundingClientRect();
+    if(!animate) chara.style.transition='none';
+    chara.style.left=(r.left-s.left)+p[0]*cell+'px';
+    chara.style.top =(r.top -s.top )+p[1]*cell+'px';
+    if(!animate){ void chara.offsetWidth; chara.style.transition=''; }
+  }
+  const blocked=(x,y)=> x<0||y<0||x>=P.C||y>=P.R||P.rocks.has(x+','+y);
+  const atGoal =p=> p[0]===P.goal[0]&&p[1]===P.goal[1];
+
+  /* ================= プログラム表示 ================= */
+  function renderProg(){
+    const cfg=LV[state.lv];
+    progEl.style.display = cfg.mode==='plan' ? 'flex' : 'none';
+    $('delBtn').style.display = cfg.mode==='plan' ? '' : 'none';
+    $('goBtn').style.display  = cfg.mode==='plan' ? '' : 'none';
+    if(cfg.mode!=='plan') return;
+    progEl.innerHTML='';
+    for(let i=0;i<cfg.slots;i++){
+      const d=document.createElement('div');
+      d.className='slot'+(i<prog.length?' filled':'');
+      if(i<prog.length) d.textContent=ARROW[prog[i]];
+      progEl.appendChild(d);
+    }
+  }
+  function markSlot(i,cls){
+    [...progEl.children].forEach((s,j)=>{
+      s.classList.toggle('now', cls==='now' && j===i);
+      if(cls==='bad' && j===i) s.classList.add('bad');
+    });
+  }
+  function clearSlotMarks(){
+    [...progEl.children].forEach(s=>s.classList.remove('now','bad'));
+  }
+
+  /* ================= 実行 ================= */
+  function bumpAnim(d){
+    // ぶつかった方向へ少しだけ突っ込んで戻る
+    chara.style.setProperty('--bx', d[0]*cell*0.25+'px');
+    chara.style.setProperty('--by', d[1]*cell*0.25+'px');
+    chara.classList.remove('bump'); void chara.offsetWidth;
+    chara.classList.add('bump');
+  }
+  function padEnabled(on){
+    document.querySelectorAll('#pad .key').forEach(b=>b.disabled=!on);
+  }
+
+  function win(){
+    done=true;
+    chara.classList.add('happy');
+    showStamp('⭕');
+    sGood();
+    setStreak(state.streak+1);
+    padEnabled(false);
+    const myRun=++runId;
+    if(state.streak>=5 && state.lv<4){
+      // ⭐5つで自動レベルアップ(挑戦の難度を上げ続ける)
+      setTimeout(()=>{
+        if(myRun!==runId) return;
+        showStamp('🌟');
+        sUp();
+        state.lv++; saveLevel(); renderChips(); setStreak(0);
+        setTimeout(newPuzzle,1200);
+      },1500);
+    }else{
+      setTimeout(()=>{ if(myRun===runId) newPuzzle(); },1700);
+    }
+  }
+
+  function run(){
+    if(running||done||prog.length===0) return;
+    running=true;
+    padEnabled(false);
+    clearSlotMarks();
+    const myRun=++runId;
+    setPos(P.start,true);
+    let i=0, cur=P.start.slice();
+    function step(){
+      if(myRun!==runId) return;
+      if(i>=prog.length){
+        // 矢印が足りなかった: スタートに戻ってならべ直し(プログラムは残す=直す練習)
+        markSlot(-1);
+        sHmm();
+        running=false;
+        setTimeout(()=>{ if(myRun===runId){ setPos(P.start,true); padEnabled(true); } },800);
+        return;
+      }
+      markSlot(i,'now');
+      const d=DIR[prog[i]];
+      const nx=cur[0]+d[0], ny=cur[1]+d[1];
+      if(blocked(nx,ny)){
+        // ぶつかった: どの矢印で失敗したかを見せて、直せるようにする
+        markSlot(i,'bad');
+        bumpAnim(d);
+        sOops();
+        running=false;
+        setTimeout(()=>{ if(myRun===runId){ setPos(P.start,true); padEnabled(true); } },900);
+        return;
+      }
+      cur=[nx,ny];
+      setPos(cur,true);
+      sStep(i);
+      if(atGoal(cur)){ running=false; setTimeout(()=>{ if(myRun===runId) win(); },350); return; }
+      i++;
+      setTimeout(step,430);
+    }
+    setTimeout(step,350);
+  }
+
+  /* ================= 操作 ================= */
+  document.querySelectorAll('#pad .key[data-dir]').forEach(b=>{
+    b.onclick=()=>{
+      if(running||done) return;
+      const key=b.dataset.dir, cfg=LV[state.lv];
+      if(cfg.mode==='sugu'){
+        // ①: タップですぐ1歩うごく
+        const d=DIR[key];
+        const nx=pos[0]+d[0], ny=pos[1]+d[1];
+        if(blocked(nx,ny)){ bumpAnim(d); sOops(); return; }
+        setPos([nx,ny],true);
+        sStep(0);
+        if(atGoal(pos)) setTimeout(win,350);
+      }else{
+        if(prog.length>=cfg.slots) return;
+        prog.push(key);
+        sTap();
+        renderProg();
+      }
+    };
+  });
+  $('delBtn').onclick=()=>{
+    if(running||done||prog.length===0) return;
+    prog.pop();
+    sTap();
+    renderProg();
+  };
+  $('goBtn').onclick=run;
+
+  /* ================= 出題・レベル ================= */
+  function newPuzzle(){
+    runId++;
+    const cfg=LV[state.lv];
+    P=genPuzzle(cfg);
+    prog=[];
+    running=false; done=false;
+    stamp.classList.remove('show');
+    chara.classList.remove('happy','bump');
+    buildBoard();
+    renderProg();
+    padEnabled(true);
+    computeLayout();
+    setPos(P.start,false);
+  }
+  function renderChips(){
+    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===state.lv));
+  }
+  document.querySelectorAll('.chip').forEach(ch=>{
+    ch.onclick=()=>{
+      state.lv=+ch.dataset.lv;
+      saveLevel();
+      renderChips();
+      setStreak(0);
+      newPuzzle();
+    };
+  });
+
+  window.addEventListener('resize',computeLayout);
+  window.addEventListener('orientationchange',()=>setTimeout(computeLayout,150));
+  if('ResizeObserver' in window){
+    new ResizeObserver(()=>computeLayout()).observe(stage);
+  }
+
+  renderChips();
+  newPuzzle();
+})();
+
+// ---------- PWA: Service Worker ----------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('../../sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
