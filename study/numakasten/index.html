@@ -156,12 +156,18 @@
     background:
       radial-gradient(circle at 32% 28%, #ffffff 0%, #f4efe4 42%, #d8cfba 78%, #b8ab90 100%);
     box-shadow:0 2px 3px rgba(0,0,0,.28), inset 0 -2px 3px rgba(0,0,0,.08);
-    cursor:pointer;
+    cursor:grab;
+    touch-action:none; /* 指のドラッグをブラウザに取られない */
     transition:left .38s cubic-bezier(.34,1.3,.5,1), top .38s cubic-bezier(.34,1.3,.5,1);
     will-change:left,top;
   }
   .ball::after{content:'';position:absolute;inset:-6px;border-radius:50%;}
-  .ball:active{filter:brightness(1.06);}
+  .ball.dragging{
+    z-index:9;cursor:grabbing;
+    transform:scale(1.12);
+    filter:brightness(1.05);
+    box-shadow:0 8px 14px rgba(0,0,0,.35), inset 0 -2px 3px rgba(0,0,0,.08);
+  }
   .ball.bounce{animation:bounce .55s;}
   @keyframes bounce{
     0%,100%{transform:translateY(0);}
@@ -414,6 +420,7 @@
     balls.forEach(b=>sides[b.side].push(b));
     ['L','R'].forEach(sd=>{
       sides[sd].forEach((b,i)=>{
+        if(b.pid!=null) return; // ドラッグ中の玉は指に追従させたまま(枠は空けて確保)
         const p=slotPos(sd,i);
         if(!animate) b.el.style.transition='none';
         b.el.style.width=layout.s+'px';
@@ -429,20 +436,68 @@
   const nOnSide = sd => balls.filter(b=>b.side===sd).length;
 
   /* ================= balls ================= */
+  // 玉を動かしていい出題:つくろう系は動かすこと自体が課題、けいさん系は合計が
+  // 変わらないので数える助けとして開放。かくれんぼ/ほすう/フラッシュはカバーの中と
+  // 答えがズレるため、くらべては正解自体が変わるため動かせない。
+  const MOVABLE=['tsukurouL','tsukurouS','keisan','keisanKuri'];
+  const canMove=()=>!Q.active || (Q.phase==='answer' && MOVABLE.includes(Q.type));
+
+  /* ---------- drag(指1本ごとに玉1個。pointerIdで区別するので複数指同時OK) ---------- */
+  const innerPoint=e=>{
+    const r=inner.getBoundingClientRect();
+    return {x:e.clientX-r.left, y:e.clientY-r.top};
+  };
+  function startDrag(b,e){
+    if(b.pid!=null || !canMove()) return;
+    e.preventDefault();
+    b.pid=e.pointerId;
+    try{ b.el.setPointerCapture(e.pointerId); }catch(_){}
+    b.el.classList.add('dragging');
+    b.el.style.transition='none';
+    const p=innerPoint(e);
+    b.dx=p.x-b.el.offsetLeft;
+    b.dy=p.y-b.el.offsetTop;
+  }
+  function dragMove(b,e){
+    if(b.pid!==e.pointerId) return;
+    const p=innerPoint(e), s=layout.s;
+    b.el.style.left=Math.min(inner.clientWidth -s, Math.max(0, p.x-b.dx))+'px';
+    b.el.style.top =Math.min(inner.clientHeight-s, Math.max(0, p.y-b.dy))+'px';
+  }
+  function dragEnd(b,e,cancelled){
+    if(b.pid!==e.pointerId) return;
+    releaseDrag(b);
+    if(!cancelled){
+      // 離した位置(玉の中心)が仕切りの中央より左なら左の部屋。
+      // その場で離せば元の部屋のままなので、間違って掴んでも動かない。
+      const side = b.el.offsetLeft+layout.s/2 < layout.chamberW+layout.divW/2 ? 'L':'R';
+      if(side!==b.side){ b.side=side; sClick(); }
+    }
+    positionAll(true);
+  }
+  function releaseDrag(b){
+    if(b.pid==null) return;
+    try{ b.el.releasePointerCapture(b.pid); }catch(_){}
+    b.pid=null;
+    b.el.classList.remove('dragging');
+    b.el.style.transition=''; void b.el.offsetWidth;
+  }
+  // 並びを作り直す前に、掴まれたままの玉を強制的に離す(出題切替中の持ち逃げ防止)
+  function cancelDrags(){
+    balls.forEach(releaseDrag);
+  }
+
   function buildBalls(n, leftCount){
     balls.forEach(b=>b.el.remove());
     balls=[];
     for(let i=0;i<n;i++){
       const el=document.createElement('div');
       el.className='ball';
-      const b={el, side: i<leftCount ? 'L':'R'};
-      el.addEventListener('pointerdown',e=>{
-        e.preventDefault();
-        if(Q.active && !(Q.phase==='answer' && Q.type.startsWith('tsukurou'))) return;
-        b.side = b.side==='L'?'R':'L';
-        sClick();
-        positionAll(true);
-      });
+      const b={el, side: i<leftCount ? 'L':'R', pid:null};
+      el.addEventListener('pointerdown',  e=>startDrag(b,e));
+      el.addEventListener('pointermove',  e=>dragMove(b,e));
+      el.addEventListener('pointerup',    e=>dragEnd(b,e,false));
+      el.addEventListener('pointercancel',e=>dragEnd(b,e,true));
       inner.appendChild(el);
       balls.push(b);
     }
@@ -450,6 +505,7 @@
     positionAll(false);
   }
   function setSplit(l,r,animate){
+    cancelDrags();
     if(balls.length!==l+r){ buildBalls(l+r, l); return; }
     balls.forEach((b,i)=>{ b.side = i<l ? 'L':'R'; });
     positionAll(!!animate);
@@ -477,6 +533,7 @@
   $('minus').onclick=()=>setTotalFree(total-1);
   $('plus').onclick =()=>setTotalFree(total+1);
   $('shakeBtn').onclick=()=>{
+    cancelDrags();
     box.classList.remove('shaking'); void box.offsetWidth;
     box.classList.add('shaking');
     sClick(); setTimeout(sClick,110); setTimeout(sClick,230);
