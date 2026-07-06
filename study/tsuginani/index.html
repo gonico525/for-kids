@@ -262,7 +262,8 @@
     const cfg=LV[state.lv];
     const unit=pick(cfg.units);
     const kinds=[...new Set(unit)];                       // ['A','B'] など
-    const set=shuffle(pick(SETS));
+    const baseSet=pick(SETS);
+    const set=shuffle(baseSet);
     Q.tokens={}; kinds.forEach((L,i)=>Q.tokens[L]=set[i]); // 記号→絵柄
     // ④はユニットが最低2周見えるマス数(短いユニットは6、AABC/ABCCは8)
     const total=cfg.total ?? Math.max(6, unit.length*2);
@@ -282,7 +283,8 @@
       if(cfg.mode==='translate'){
         // お手本と違う絵柄セットで同じ「ならびかた」を作らせる。
         // ダミーを1個混ぜて「ボタンを左から順に押すだけ」では正解できないようにする
-        let set2; do{ set2=pick(SETS); }while(set2[0]===set[0]);
+        // set はシャッフル済みで先頭比較では同一セットを見抜けないので、元の配列同士で比較する
+        let set2; do{ set2=pick(SETS); }while(set2===baseSet);
         Q.pal=shuffle(set2).slice(0,kinds.length+1);
       }else{
         Q.pal=shuffle(kinds.map(L=>Q.tokens[L]));
