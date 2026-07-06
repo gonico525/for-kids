@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>つぎはな〜に？ — もようのべんきょう</title>
+<meta name="theme-color" content="#FFF1D6">
+<link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
+<style>
+  :root{
+    --bg:#FFF1D6;
+    --ink:#5a4632;
+    --paper:#fffaf0;
+    --line:#d9a05b;
+    --accent:#e8703a;
+    --good:#4e8f5a;
+    --cs:52px; /* セル1個の大きさ(JSが画面に合わせて更新する) */
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;}
+  body{
+    font-family:'Hiragino Maru Gothic ProN','Hiragino Sans','Noto Sans JP',sans-serif;
+    background:
+      radial-gradient(ellipse at 50% -20%, #fff8e8 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    user-select:none;-webkit-user-select:none;
+    touch-action:manipulation;
+    display:flex;flex-direction:column;
+  }
+
+  /* ---------- top bar ---------- */
+  #bar{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:8px;
+    padding:6px 10px;justify-content:center;flex-wrap:wrap;
+  }
+  #title{font-weight:800;font-size:14px;letter-spacing:.1em;margin-right:4px;white-space:nowrap;}
+  .btn{
+    font-family:inherit;font-weight:700;font-size:13px;
+    color:var(--ink);background:var(--paper);
+    border:2px solid var(--line);border-radius:999px;
+    padding:6px 12px;box-shadow:0 2px 0 var(--line);
+    cursor:pointer;white-space:nowrap;transition:transform .08s;
+  }
+  .btn:active{transform:translateY(2px);box-shadow:0 0 0 var(--line);}
+  a.btn{text-decoration:none;display:inline-flex;align-items:center;}
+  .chip{
+    font-family:inherit;font-weight:700;font-size:12px;
+    color:var(--ink);background:var(--paper);
+    border:2px solid var(--line);border-radius:999px;
+    padding:5px 10px;cursor:pointer;
+  }
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  #streak{
+    font-weight:800;font-size:13px;
+    background:#f4d47a;border:2px solid #c9a83f;border-radius:999px;
+    padding:5px 10px;white-space:nowrap;
+  }
+
+  /* ---------- stage ---------- */
+  #main{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;}
+  #stage{
+    flex:1 1 auto;position:relative;
+    display:flex;align-items:center;justify-content:center;
+    padding:4px 12px;min-height:0;
+  }
+  #rows{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .row{display:flex;gap:6px;justify-content:center;}
+  #rowArrow{font-size:calc(var(--cs)*0.45);line-height:1;}
+  .cell{
+    width:var(--cs);height:var(--cs);
+    display:flex;align-items:center;justify-content:center;
+    font-size:calc(var(--cs)*0.66);line-height:1;
+    background:var(--paper);
+    border:2px solid var(--line);border-radius:14px;
+    box-shadow:0 2px 0 var(--line);
+  }
+  .cell.empty{
+    background:rgba(255,255,255,.4);
+    border-style:dashed;box-shadow:none;
+  }
+  .cell.next{animation:pulse 1s ease-in-out infinite;border-color:var(--accent);}
+  @keyframes pulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.1);}
+  }
+  .cell.pop{animation:pop .3s ease-out;}
+  @keyframes pop{
+    0%{transform:scale(.4);}
+    60%{transform:scale(1.18);}
+    100%{transform:scale(1);}
+  }
+  .cell.bad{animation:cellShake .3s;}
+  @keyframes cellShake{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-6px);}
+    75%{transform:translateX(6px);}
+  }
+
+  /* ---------- ⭕スタンプ ---------- */
+  #stamp{
+    position:absolute;inset:0;z-index:20;
+    display:flex;align-items:center;justify-content:center;
+    font-size:min(30vh,150px);
+    pointer-events:none;opacity:0;
+  }
+  #stamp.show{animation:stampPop 1.2s ease-out forwards;}
+  @keyframes stampPop{
+    0%{opacity:0;transform:scale(.3);}
+    22%{opacity:1;transform:scale(1.15);}
+    40%{transform:scale(1);}
+    70%{opacity:1;}
+    100%{opacity:0;transform:scale(1);}
+  }
+
+  /* ---------- palette ---------- */
+  #palette{
+    flex:0 0 auto;
+    display:flex;justify-content:center;align-items:center;
+    gap:12px;flex-wrap:wrap;
+    padding:6px 10px calc(12px + env(safe-area-inset-bottom));
+  }
+  .pal{
+    font-family:inherit;
+    width:clamp(56px,13vw,80px);height:clamp(56px,13vw,80px);
+    font-size:clamp(30px,7vw,44px);line-height:1;
+    background:var(--paper);
+    border:2px solid var(--line);border-radius:18px;
+    box-shadow:0 3px 0 var(--line);
+    cursor:pointer;
+  }
+  .pal:active{transform:translateY(3px);box-shadow:0 0 0 var(--line);}
+  .pal:disabled{opacity:.4;}
+
+  /* ---------- タブレット ---------- */
+  @media (min-width:600px) and (min-height:500px){
+    #title{font-size:16px;}
+    .chip{font-size:14px;padding:6px 14px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cell.next{animation:none;outline:3px solid var(--accent);}
+    .cell.pop{animation:none;}
+    .cell.bad{animation:none;}
+    #stamp.show{animation:stampFade 1.2s forwards;}
+  }
+  @keyframes stampFade{
+    0%{opacity:0;}
+    15%{opacity:1;}
+    70%{opacity:1;}
+    100%{opacity:0;}
+  }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <a class="btn" href="../../" aria-label="えらぶがめんにもどる">🏠</a>
+  <button class="btn" id="soundBtn" aria-label="おとのオンオフ">🔊</button>
+  <div id="title">つぎはな〜に？</div>
+  <button class="chip" data-lv="1">①まねっこ</button>
+  <button class="chip" data-lv="2">②つづき</button>
+  <button class="chip" data-lv="3">③つづき＋</button>
+  <button class="chip" data-lv="4">④へんしん</button>
+  <span id="streak">⭐ 0</span>
+</div>
+
+<div id="main">
+  <div id="stage">
+    <div id="rows">
+      <div class="row" id="rowM"></div>
+      <div id="rowArrow">⬇️</div>
+      <div class="row" id="rowA"></div>
+    </div>
+    <div id="stamp"></div>
+  </div>
+  <div id="palette"></div>
+</div>
+
+<script src="../../shared/sound.js"></script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const stage=$('stage'), rowM=$('rowM'), rowA=$('rowA'), rowArrow=$('rowArrow');
+  const palette=$('palette'), stamp=$('stamp');
+  const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const pick=a=>a[rnd(0,a.length-1)];
+  const shuffle=a=>{const x=a.slice();for(let i=x.length-1;i>0;i--){const j=rnd(0,i);[x[i],x[j]]=[x[j],x[i]];}return x;};
+
+  /* ================= sound(shared/sound.js。ON/OFFは全アプリ共通) ================= */
+  // 記号A/B/Cごとに音の高さを割り当てて、もようを「メロディ」としても聞かせる
+  const PITCH={A:523,B:659,C:784,D:988};
+  const sNote =L=>{ KidsSound.tone(PITCH[L]||600,0.16,0.13,'sine'); };
+  const sGood =()=>{ KidsSound.tone(660,0.12,0.14,'sine'); KidsSound.tone(880,0.18,0.14,'sine',0.1); KidsSound.tone(1320,0.22,0.10,'sine',0.2); };
+  const sOops =()=>{ KidsSound.tone(300,0.18,0.12,'sine'); KidsSound.tone(220,0.30,0.12,'sine',0.15); };
+  const sUp   =()=>{ [523,659,784,1046].forEach((f,i)=>KidsSound.tone(f,0.15,0.13,'triangle',i*0.12)); };
+  function playMelody(letters){
+    letters.forEach((L,i)=>KidsSound.tone(PITCH[L]||600,0.15,0.11,'sine',i*0.2));
+  }
+  const soundBtn=$('soundBtn');
+  function renderSound(){ soundBtn.textContent = KidsSound.enabled() ? '🔊' : '🔇'; }
+  soundBtn.onclick=()=>{ KidsSound.setEnabled(!KidsSound.enabled()); renderSound(); if(KidsSound.enabled()) sGood(); };
+  renderSound();
+  window.addEventListener('pageshow',renderSound);
+
+  // iOSは最初のタップまで音を出せないので、出題時の自動メロディは操作後だけ鳴らす
+  let interacted=false;
+  document.addEventListener('pointerdown',()=>{interacted=true;},{once:true,capture:true});
+
+  /* ================= 絵柄セット(1問ごとにどれかを使う) ================= */
+  const SETS=[
+    ['🍎','🍌','🍇','🍊'],
+    ['🐶','🐱','🐸','🐭'],
+    ['🔴','🟡','🔵','🟢'],
+    ['🚗','🚌','🚓','🚲'],
+    ['⭐','🌙','☀️','☁️'],
+    ['🌷','🌻','🍀','🌹'],
+  ];
+
+  /* ================= レベル設計 =================
+     パターン研究(Rittle-Johnsonら)の課題形式に対応:
+       ①まねっこ = duplicate(お手本と同じ並びを作る)
+       ②③つづき = extend(続きを埋める。③はユニットが長く空欄も多い)
+       ④へんしん = abstract(同じ構造を別の絵柄で作り直す=構造の抽象化)
+     unit はもようの繰り返し単位。visible=見せる数、fill=埋めさせる数。 */
+  const LV={
+    1:{units:['AB','ABB'],        mode:'copy',      total:6},
+    2:{units:['AB','AAB','ABB'],  mode:'extend',    total:8, visible:6},
+    3:{units:['ABC','AABB'],      mode:'extend',    total:9, visible:6},
+    4:{units:['AB','AAB','ABB','ABC'], mode:'translate', total:6},
+  };
+
+  const state={lv:1, streak:0, qid:0};
+  try{
+    const s=parseInt(localStorage.getItem('tsuginani-level'),10);
+    if(s>=1 && s<=4) state.lv=s;
+  }catch(e){}
+
+  const Q={letters:[], mode:'', fillFrom:0, filled:0, tokens:{}, pal:[], clean:true, done:false};
+
+  function setStreak(n){ state.streak=n; $('streak').textContent='⭐ '+n; }
+  function saveLevel(){ try{ localStorage.setItem('tsuginani-level', state.lv); }catch(e){} }
+  function showStamp(ch){
+    stamp.textContent=ch;
+    stamp.classList.remove('show'); void stamp.offsetWidth;
+    stamp.classList.add('show');
+  }
+
+  /* ================= 出題 ================= */
+  function makeCell(token, empty){
+    const d=document.createElement('div');
+    d.className='cell'+(empty?' empty':'');
+    if(token) d.textContent=token;
+    return d;
+  }
+
+  function newQuestion(){
+    Q.qid=++state.qid;
+    stamp.classList.remove('show');
+    const cfg=LV[state.lv];
+    const unit=pick(cfg.units);
+    const kinds=[...new Set(unit)];                       // ['A','B'] など
+    const set=shuffle(pick(SETS));
+    Q.tokens={}; kinds.forEach((L,i)=>Q.tokens[L]=set[i]); // 記号→絵柄
+    Q.letters=[];
+    for(let i=0;i<cfg.total;i++) Q.letters.push(unit[i%unit.length]);
+    Q.mode=cfg.mode;
+    Q.clean=true; Q.done=false; Q.filled=0;
+
+    rowM.innerHTML=''; rowA.innerHTML='';
+    if(cfg.mode==='copy' || cfg.mode==='translate'){
+      // 上段=お手本、下段=作る場所
+      Q.letters.forEach(L=>rowM.appendChild(makeCell(Q.tokens[L],false)));
+      Q.letters.forEach(()=>rowA.appendChild(makeCell(null,true)));
+      rowArrow.style.display='';
+      rowA.style.display='';
+      Q.fillFrom=0;
+      if(cfg.mode==='translate'){
+        // お手本と違う絵柄セットで同じ「ならびかた」を作らせる
+        let set2; do{ set2=pick(SETS); }while(set2[0]===set[0]);
+        Q.pal=shuffle(set2).slice(0,kinds.length);
+      }else{
+        Q.pal=shuffle(kinds.map(L=>Q.tokens[L]));
+      }
+    }else{
+      // 1段だけ: 前半は見せて、うしろの空欄を埋めさせる
+      Q.letters.forEach((L,i)=>rowM.appendChild(makeCell(i<cfg.visible?Q.tokens[L]:null, i>=cfg.visible)));
+      rowArrow.style.display='none';
+      rowA.style.display='none';
+      Q.fillFrom=cfg.visible;
+      Q.pal=shuffle(kinds.map(L=>Q.tokens[L]));
+    }
+    buildPalette();
+    markNext();
+    computeSize();
+    if(interacted) playMelody(Q.letters.slice(0,Q.fillFrom || Q.letters.length));
+  }
+
+  function answerCells(){
+    return (Q.mode==='extend')
+      ? [...rowM.children].slice(Q.fillFrom)
+      : [...rowA.children];
+  }
+  function markNext(){
+    answerCells().forEach((c,i)=>c.classList.toggle('next', i===Q.filled));
+  }
+  function buildPalette(){
+    palette.innerHTML='';
+    Q.pal.forEach(t=>{
+      const b=document.createElement('button');
+      b.className='pal'; b.textContent=t;
+      b.onclick=()=>tap(t);
+      palette.appendChild(b);
+    });
+  }
+  function lockPalette(){ palette.querySelectorAll('button').forEach(b=>b.disabled=true); }
+
+  /* ================= 回答 ================= */
+  function fillCell(cell, token){
+    cell.textContent=token;
+    cell.classList.remove('empty','next','bad');
+    cell.classList.remove('pop'); void cell.offsetWidth;
+    cell.classList.add('pop');
+  }
+
+  function tap(token){
+    if(Q.done) return;
+    const cells=answerCells();
+    const cell=cells[Q.filled];
+    if(!cell) return;
+
+    if(Q.mode==='translate'){
+      // へんしんは「どっちの絵柄をAにするか」は自由なので、埋め終わってから構造で判定
+      fillCell(cell, token);
+      const idx=Q.pal.indexOf(token);
+      sNote(['A','B','C'][idx>=0?idx:0]);
+      Q.filled++;
+      markNext();
+      if(Q.filled>=cells.length) judgeTranslate(cells);
+      return;
+    }
+
+    const expected=Q.tokens[Q.letters[Q.fillFrom+Q.filled]];
+    if(token===expected){
+      fillCell(cell, token);
+      sNote(Q.letters[Q.fillFrom+Q.filled]);
+      Q.filled++;
+      markNext();
+      if(Q.filled>=cells.length) onCorrect();
+    }else{
+      Q.clean=false;
+      setStreak(0);
+      sOops();
+      cell.classList.remove('bad'); void cell.offsetWidth;
+      cell.classList.add('bad');
+    }
+  }
+
+  function judgeTranslate(cells){
+    // 同じ記号の場所には同じ絵柄、違う記号の場所には違う絵柄が入っていればOK
+    const map={}, used={};
+    let ok=true;
+    Q.letters.forEach((L,i)=>{
+      const t=cells[i].textContent;
+      if(map[L]===undefined){
+        if(used[t]) ok=false;
+        map[L]=t; used[t]=true;
+      }else if(map[L]!==t) ok=false;
+    });
+    if(ok){ onCorrect(); return; }
+    // やりなおし: 下段を空に戻す(お手本は見えたまま)
+    Q.clean=false;
+    setStreak(0);
+    sOops();
+    showStamp('❌');
+    const myId=Q.qid;
+    setTimeout(()=>{
+      if(myId!==Q.qid) return;
+      Q.filled=0;
+      cells.forEach(c=>{ c.textContent=''; c.classList.add('empty'); });
+      markNext();
+    },700);
+  }
+
+  function onCorrect(){
+    Q.done=true;
+    lockPalette();
+    showStamp('⭕');
+    sGood();
+    playMelody(Q.letters); // 完成したもようをメロディで聞かせる
+    const myId=Q.qid;
+    if(Q.clean) setStreak(state.streak+1);
+    if(state.streak>=5 && state.lv<4){
+      // ⭐5つで自動レベルアップ(簡単なままの反復は効果が薄いので挑戦を上げ続ける)
+      setTimeout(()=>{
+        if(myId!==Q.qid) return;
+        showStamp('🌟');
+        sUp();
+        state.lv++; saveLevel(); renderChips(); setStreak(0);
+        setTimeout(()=>{ if(myId===state.qid) newQuestion(); },1200);
+      },1400);
+    }else{
+      setTimeout(()=>{ if(myId===Q.qid) newQuestion(); },1600);
+    }
+  }
+
+  /* ================= レベル切替 ================= */
+  function renderChips(){
+    document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===state.lv));
+  }
+  function setLevel(lv){
+    state.lv=lv;
+    saveLevel();
+    renderChips();
+    setStreak(0);
+    setTimeout(newQuestion, 200);
+  }
+  document.querySelectorAll('.chip').forEach(ch=>{
+    ch.onclick=()=>setLevel(+ch.dataset.lv);
+  });
+
+  /* ================= layout ================= */
+  function computeSize(){
+    const n=Math.max(rowM.children.length, rowA.children.length, 1);
+    const sw=stage.clientWidth-24, sh=stage.clientHeight-16;
+    const rows=(Q.mode==='extend')?1:2.6; // 2段+矢印ぶん
+    const cs=Math.max(26, Math.min(64, Math.floor((sw-(n-1)*6)/n), Math.floor(sh/rows)-8));
+    document.documentElement.style.setProperty('--cs', cs+'px');
+  }
+  window.addEventListener('resize',computeSize);
+  window.addEventListener('orientationchange',()=>setTimeout(computeSize,150));
+
+  renderChips();
+  newQuestion();
+})();
+
+// ---------- PWA: Service Worker ----------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('../../sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

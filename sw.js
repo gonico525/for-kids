@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-v7';
+const CACHE_NAME = 'kids-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,10 @@ const ASSETS = [
   './games/pyoko/index.html',
   './study/numakasten/',
   './study/numakasten/index.html',
+  './study/tsuginani/',
+  './study/tsuginani/index.html',
+  './study/yajirushi/',
+  './study/yajirushi/index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
