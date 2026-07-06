@@ -223,12 +223,13 @@
        ①まねっこ = duplicate(お手本と同じ並びを作る)
        ②③つづき = extend(続きを埋める。③はユニットが長く空欄も多い)
        ④へんしん = abstract(同じ構造を別の絵柄で作り直す=構造の抽象化)
-     unit はもようの繰り返し単位。visible=見せる数、fill=埋めさせる数。 */
+     unit はもようの繰り返し単位。visible=見せる数、fill=埋めさせる数。
+     ④は total を持たず、ユニットが必ず2周見えるようマス数をユニット長から決める。 */
   const LV={
     1:{units:['AB','ABB'],        mode:'copy',      total:6},
     2:{units:['AB','AAB','ABB'],  mode:'extend',    total:8, visible:6},
     3:{units:['ABC','AABB'],      mode:'extend',    total:9, visible:6},
-    4:{units:['AB','AAB','ABB','ABC'], mode:'translate', total:6},
+    4:{units:['AB','AAB','ABB','ABC','AABC','ABCC'], mode:'translate'},
   };
 
   const state={lv:1, streak:0, qid:0};
@@ -263,8 +264,10 @@
     const kinds=[...new Set(unit)];                       // ['A','B'] など
     const set=shuffle(pick(SETS));
     Q.tokens={}; kinds.forEach((L,i)=>Q.tokens[L]=set[i]); // 記号→絵柄
+    // ④はユニットが最低2周見えるマス数(短いユニットは6、AABC/ABCCは8)
+    const total=cfg.total ?? Math.max(6, unit.length*2);
     Q.letters=[];
-    for(let i=0;i<cfg.total;i++) Q.letters.push(unit[i%unit.length]);
+    for(let i=0;i<total;i++) Q.letters.push(unit[i%unit.length]);
     Q.mode=cfg.mode;
     Q.clean=true; Q.done=false; Q.filled=0;
 
@@ -277,9 +280,10 @@
       rowA.style.display='';
       Q.fillFrom=0;
       if(cfg.mode==='translate'){
-        // お手本と違う絵柄セットで同じ「ならびかた」を作らせる
+        // お手本と違う絵柄セットで同じ「ならびかた」を作らせる。
+        // ダミーを1個混ぜて「ボタンを左から順に押すだけ」では正解できないようにする
         let set2; do{ set2=pick(SETS); }while(set2[0]===set[0]);
-        Q.pal=shuffle(set2).slice(0,kinds.length);
+        Q.pal=shuffle(set2).slice(0,kinds.length+1);
       }else{
         Q.pal=shuffle(kinds.map(L=>Q.tokens[L]));
       }
@@ -334,7 +338,7 @@
       // へんしんは「どっちの絵柄をAにするか」は自由なので、埋め終わってから構造で判定
       fillCell(cell, token);
       const idx=Q.pal.indexOf(token);
-      sNote(['A','B','C'][idx>=0?idx:0]);
+      sNote(['A','B','C','D'][idx>=0?idx:0]);
       Q.filled++;
       markNext();
       if(Q.filled>=cells.length) judgeTranslate(cells);
