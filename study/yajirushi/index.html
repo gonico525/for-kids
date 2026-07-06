@@ -243,12 +243,14 @@
   /* ================= レベル設計 =================
      ①は1タップ=1歩(矢印と動きの対応づけを学ぶ)。②から「先に全部ならべて▶で実行」
      =計画してから動かす本番モード。③で岩(障害物)、④で道が長くなる。
-     len は正解の道の歩数、slots はならべられる矢印の数。 */
+     len は「岩を考慮した最短手数」の許容範囲、slots はならべられる矢印の数。
+     detour は岩なし最短(マンハッタン距離)からの最低遠回り歩数:
+     ③は岩が最短ルートを必ず塞ぐこと、④は2歩以上の遠回りを保証する。 */
   const LV={
-    1:{mode:'sugu', size:[4,4], len:[2,3], rocks:1, slots:0},
-    2:{mode:'plan', size:[4,4], len:[2,3], rocks:0, slots:4},
-    3:{mode:'plan', size:[5,4], len:[3,5], rocks:2, slots:6},
-    4:{mode:'plan', size:[5,5], len:[5,7], rocks:4, slots:8},
+    1:{mode:'sugu', size:[4,4], len:[2,3], rocks:1, slots:0, detour:0},
+    2:{mode:'plan', size:[4,4], len:[2,3], rocks:0, slots:4, detour:0},
+    3:{mode:'plan', size:[5,4], len:[3,5], rocks:2, slots:6, detour:1},
+    4:{mode:'plan', size:[5,5], len:[5,7], rocks:4, slots:8, detour:2},
   };
   const DIR={L:[-1,0],R:[1,0],U:[0,-1],D:[0,1]};
   const ARROW={L:'⬅️',R:'➡️',U:'⬆️',D:'⬇️'};
@@ -274,34 +276,36 @@
   }
 
   /* ================= 迷路生成 =================
-     スタートからランダムに「同じマスを通らない道」を歩いてゴールを決め、
-     岩は道以外のマスにだけ置く。作り方として必ず解ける迷路になる。 */
+     スタート・ゴール・岩をランダムに置き、BFSで「岩を考慮した最短手数 d1」を検証して
+     条件を満たすまで作り直す。d1 が len の範囲内(=必ず解ける)ことに加え、
+     detour で「岩なし最短 d0 からの遠回り」を強制するので、岩が経路の障害として必ず効く。 */
+  function bfsDist(C,R,rocks,start,goal){
+    const dist=new Map([[start.join(','),0]]);
+    const q=[start];
+    for(let i=0;i<q.length;i++){
+      const [x,y]=q[i];
+      if(x===goal[0]&&y===goal[1]) return dist.get(x+','+y);
+      for(const d of Object.values(DIR)){
+        const nx=x+d[0], ny=y+d[1], k=nx+','+ny;
+        if(nx<0||ny<0||nx>=C||ny>=R||rocks.has(k)||dist.has(k)) continue;
+        dist.set(k,dist.get(x+','+y)+1); q.push([nx,ny]);
+      }
+    }
+    return Infinity;
+  }
   function genPuzzle(cfg){
     const [C,R]=cfg.size;
+    const cells=[];
+    for(let y=0;y<R;y++)for(let x=0;x<C;x++)cells.push([x,y]);
     for(let t=0;t<300;t++){
-      const len=rnd(cfg.len[0],cfg.len[1]);
-      let cur=[rnd(0,C-1),rnd(0,R-1)];
-      const seen=new Set([cur.join(',')]);
-      const cells=[cur];
-      let ok=true;
-      for(let i=0;i<len;i++){
-        const dirs=shuffle(Object.values(DIR));
-        let moved=false;
-        for(const d of dirs){
-          const nx=cur[0]+d[0], ny=cur[1]+d[1];
-          if(nx<0||ny<0||nx>=C||ny>=R) continue;
-          if(seen.has(nx+','+ny)) continue;
-          cur=[nx,ny]; seen.add(nx+','+ny); cells.push(cur); moved=true; break;
-        }
-        if(!moved){ ok=false; break; }
-      }
-      if(!ok) continue;
-      const free=[];
-      for(let y=0;y<R;y++)for(let x=0;x<C;x++){
-        if(!seen.has(x+','+y)) free.push([x,y]);
-      }
-      const rocks=new Set(shuffle(free).slice(0,cfg.rocks).map(c=>c.join(',')));
-      return {C,R,start:cells[0],goal:cells[cells.length-1],rocks};
+      const p=shuffle(cells);
+      const start=p[0], goal=p[1];
+      const rocks=new Set(p.slice(2,2+cfg.rocks).map(c=>c.join(',')));
+      const d0=Math.abs(start[0]-goal[0])+Math.abs(start[1]-goal[1]);
+      const d1=bfsDist(C,R,rocks,start,goal);
+      if(d1<cfg.len[0]||d1>cfg.len[1]) continue;
+      if(d1-d0<cfg.detour) continue;
+      return {C,R,start,goal,rocks};
     }
     // 万一の保険(ほぼ通らない)
     return {C,R,start:[0,0],goal:[1,0],rocks:new Set()};
