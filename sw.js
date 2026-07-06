@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-v6';
+const CACHE_NAME = 'kids-v7';
 const ASSETS = [
   './',
   './index.html',
