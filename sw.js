@@ -17,6 +17,7 @@ const ASSETS = [
   './study/tsuginani/index.html',
   './study/yajirushi/',
   './study/yajirushi/index.html',
+  // @new-app:assets (tools/new_app.py がここにエントリを挿入する。消さないこと)
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>{{TITLE}} — こどもひろば</title>
+<link rel="manifest" href="../../manifest.webmanifest">
+<meta name="theme-color" content="{{THEME_COLOR}}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="{{TITLE}}">
+<link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
+<style>
+  :root {
+    --bg: {{THEME_COLOR}};
+    --ink: #3A3A3A;
+    --card: #FFFFFF;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+    display: flex; justify-content: center;
+  }
+  #app {
+    position: relative;
+    width: 100%; max-width: 430px; min-height: 100dvh;
+    display: flex; flex-direction: column;
+    padding: calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+  }
+
+  /* ---------- 共通パーツ ---------- */
+  .back-btn {
+    position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
+    font-size: 26px; text-decoration: none; z-index: 5;
+  }
+  .sound-toggle {
+    position: absolute; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right));
+    font-size: 22px; background: none; border: none; z-index: 5;
+  }
+  .screen { display: none; flex: 1; flex-direction: column; gap: 16px; }
+  .screen.active { display: flex; }
+  .title { font-size: 26px; font-weight: 900; text-align: center; margin-top: 28px; }
+  .subtitle { font-size: 12px; color: #777; text-align: center; }
+  .big-btn {
+    font-family: inherit; font-size: 24px; font-weight: 900; color: var(--ink);
+    background: var(--card); border: none; border-radius: 20px; padding: 18px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+  }
+  .big-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.12); }
+  .hidden { display: none !important; }
+<!-- @games-only:start -->
+  .tickets-box { font-size: 18px; font-weight: 900; text-align: center; }
+
+  /* ---------- おやすみ ---------- */
+  #oyasumi {
+    justify-content: center; align-items: center; text-align: center; gap: 22px;
+    background: linear-gradient(180deg, #2B3A67 0%, #1B2447 100%);
+    border-radius: 24px; padding: 24px; color: #F5F2E8;
+  }
+  .moon { font-size: 84px; animation: floaty 3s ease-in-out infinite; }
+  .oyasumi-text { font-size: 22px; font-weight: 900; line-height: 1.8; }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+<!-- @games-only:end -->
+
+  @media (prefers-reduced-motion: reduce) {
+<!-- @games-only:start -->
+    .moon { animation: none; }
+<!-- @games-only:end -->
+    /* 新しいアニメーションを足したらここに無効化・簡略化を書く */
+  }
+
+  /* ---------- タブレット ---------- */
+  @media (min-width: 600px) {
+    #app { max-width: 560px; }
+    .title { font-size: 32px; }
+    .subtitle { font-size: 14px; }
+  }
+
+  /* ---------- 横画面: 2カラムに ---------- */
+  @media (orientation: landscape) and (min-width: 640px) {
+    #app { max-width: 900px; }
+    /* 主要画面を grid の2カラムに再配置する(pitatto の #start.active を参考に) */
+  }
+
+  /* ---------- 低い横画面のスマホ ---------- */
+  @media (max-height: 500px) {
+    .title { font-size: 20px; margin-top: 20px; }
+    #app { padding-top: calc(8px + env(safe-area-inset-top)); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <button class="sound-toggle" id="btn-sound">🔊</button>
+
+  <!-- スタート -->
+  <section id="start" class="screen active">
+    <a class="back-btn" href="../../" aria-label="えらぶがめんにもどる">⬅️</a>
+    <div class="title">{{EMOJI}} {{TITLE}}</div>
+    <div class="subtitle">4〜6さい向け(おうちのかたへ: 文字が読めなくても遊べます)</div>
+<!-- @games-only:start -->
+    <div class="tickets-box">きょうは あと <span id="tickets">🎈🎈🎈</span></div>
+<!-- @games-only:end -->
+    <button class="big-btn" id="btn-start">{{EMOJI}} はじめる</button>
+  </section>
+
+  <!-- 本編 -->
+  <section id="main" class="screen">
+    <div class="title">{{EMOJI}}</div>
+    <!-- TODO: ここにアプリ本体の UI をつくる -->
+    <button class="big-btn" id="btn-home">🏠</button>
+  </section>
+<!-- @games-only:start -->
+
+  <!-- おやすみ(きょうのチケットを使いきったら) -->
+  <section id="oyasumi" class="screen">
+    <div class="moon">🌙</div>
+    <div class="oyasumi-text">きょうのぶんは おしまい!<br>またあしたね</div>
+    <button class="big-btn" id="btn-oyasumi-home">🏠</button>
+  </section>
+<!-- @games-only:end -->
+
+</div>
+
+<!-- @games-only:start -->
+<script src="../../shared/tickets.js"></script>
+<!-- @games-only:end -->
+<script src="../../shared/sound.js"></script>
+<script src="../../shared/app-boot.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- 画面切替 ----------
+  const screens = {
+    start: $('start'),
+    main: $('main'),
+// @games-only:start
+    oyasumi: $('oyasumi'),
+// @games-only:end
+  };
+  function show(name) {
+    Object.values(screens).forEach((s) => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ---------- 効果音(KidsSound.tone で合成。定番の2つから調整する) ----------
+  const sGood = () => { KidsSound.tone(660, 0.12, 0.14, 'sine'); KidsSound.tone(880, 0.18, 0.14, 'sine', 0.1); };
+  const sOops = () => { KidsSound.tone(300, 0.18, 0.12, 'sine'); KidsSound.tone(220, 0.30, 0.12, 'sine', 0.15); };
+// @games-only:start
+
+  // ---------- 1日にあそべる回数(🎈チケット / あそび共通ストア) ----------
+  function renderTickets() {
+    $('tickets').textContent = KidsTickets.remaining() > 0 ? '🎈'.repeat(KidsTickets.remaining()) : 'なし 💤';
+  }
+  function tryStart() {
+    if (!KidsTickets.useOne()) { renderTickets(); show('oyasumi'); return; }
+    renderTickets();
+    startRound();
+  }
+  $('btn-oyasumi-home').addEventListener('click', () => { renderTickets(); show('start'); });
+
+  // ハブから戻ってきたとき(bfcache 復帰含む)に残数を最新化
+  window.addEventListener('pageshow', renderTickets);
+// @games-only:end
+
+  function startRound() {
+    show('main');
+    // TODO: ここにアプリ本体のロジックをつくる
+  }
+
+// @games-only:start
+  $('btn-start').addEventListener('click', tryStart);
+// @games-only:end
+// @study-only:start
+  $('btn-start').addEventListener('click', startRound);
+// @study-only:end
+  $('btn-home').addEventListener('click', () => {
+// @games-only:start
+    renderTickets();
+// @games-only:end
+    show('start');
+  });
+
+  KidsApp.init({ soundButton: $('btn-sound'), onSoundOn: sGood });
+// @games-only:start
+  renderTickets();
+// @games-only:end
+})();
+</script>
+</body>
+</html>
