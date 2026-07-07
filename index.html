@@ -246,10 +246,14 @@
 </div>
 
 <script src="shared/tickets.js"></script>
+<script src="shared/emoji.js"></script>
 <script src="shared/app-boot.js"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
+
+  // 絵文字フォントが古い端末(Fire HD 10 など)ではタイルの絵文字を古い世代に差し替える
+  KidsEmoji.fix({ '🧮': '🔢' });
 
   // ---------- 🎈チケット表示 ----------
   function renderTickets() {

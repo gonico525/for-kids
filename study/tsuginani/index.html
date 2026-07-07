@@ -186,9 +186,13 @@
 
 <script src="../../shared/sound.js"></script>
 <script src="../../shared/progress.js"></script>
+<script src="../../shared/emoji.js"></script>
 <script src="../../shared/app-boot.js"></script>
 <script>
 (function(){
+  // 絵文字フォントが古い端末(Fire HD 10 など)では 🟡🟢 が出ないのでハートに差し替える
+  const EMOJI = KidsEmoji.fix({ '🟡': '💛', '🟢': '💚' });
+
   const $ = id => document.getElementById(id);
   const stage=$('stage'), rowM=$('rowM'), rowA=$('rowA'), rowArrow=$('rowArrow');
   const palette=$('palette'), stamp=$('stamp');
@@ -216,7 +220,7 @@
   const SETS=[
     ['🍎','🍌','🍇','🍊'],
     ['🐶','🐱','🐸','🐭'],
-    ['🔴','🟡','🔵','🟢'],
+    ['🔴',EMOJI['🟡'],'🔵',EMOJI['🟢']],
     ['🚗','🚌','🚓','🚲'],
     ['⭐','🌙','☀️','☁️'],
     ['🌷','🌻','🍀','🌹'],

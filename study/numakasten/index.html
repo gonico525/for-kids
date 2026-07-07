@@ -371,9 +371,13 @@
 </div>
 
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/emoji.js"></script>
 <script src="../../shared/app-boot.js"></script>
 <script>
 (function(){
+  // 絵文字フォントが古い端末(Fire HD 10 など)では 🧸 が出ないので 🎨 に差し替える
+  const EMOJI = KidsEmoji.fix({ '🧸': '🎨' });
+
   const COLS = 5, MAX = 20;
   const $ = id => document.getElementById(id);
   const inner=$('inner'), box=$('box'), stage=$('stage'), divider=$('divider');
@@ -776,7 +780,7 @@
   const modeBtn=$('modeBtn');
   function setMode(active){
     Q.active=active;
-    modeBtn.textContent = active ? '🧸 じゆうあそび' : '✏️ もんだい';
+    modeBtn.textContent = active ? EMOJI['🧸'] + ' じゆうあそび' : '✏️ もんだい';
     modeBtn.classList.toggle('on', active);
     $('freeCtrls').style.display = active ? 'none' : 'contents';
     $('quizCtrls').style.display = active ? 'flex' : 'none';

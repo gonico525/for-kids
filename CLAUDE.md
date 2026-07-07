@@ -49,6 +49,7 @@ Use the `new-app` skill (`.claude/skills/new-app/SKILL.md`). In short: `python3 
 
 - UI text, code comments, and commit messages are in Japanese; keep that style.
 - Target audience can't read: communicate through emoji, color, and sound rather than text wherever possible.
+- Prefer old-generation emoji (Unicode 6 era). Newer emoji (Unicode 9+) render as tofu (×) on devices with old emoji fonts (e.g. Fire HD 10); if one is needed, declare a fallback via `KidsEmoji.fix()` (`shared/emoji.js`, see `docs/reference/shared-modules.md`).
 - No external dependencies (no CDN fonts/scripts) — everything must work offline once cached.
 - `localStorage` keys follow `kids-*` (shared) / `<app-id>-<用途>` (per app); **register every new key in `docs/reference/storage-keys.md`.**
 - Sound is synthesized via `KidsSound.tone()` (no audio assets); the AudioContext must be created/resumed from a user gesture.

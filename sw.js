@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-v13';
+const CACHE_NAME = 'kids-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS = [
   './shared/sound.js',
   './shared/app-boot.js',
   './shared/progress.js',
+  './shared/emoji.js',
   './games/pyoko/',
   './games/pyoko/index.html',
   './games/daruma/',

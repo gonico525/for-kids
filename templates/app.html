@@ -133,11 +133,16 @@
 <script src="../../shared/tickets.js"></script>
 <!-- @games-only:end -->
 <script src="../../shared/sound.js"></script>
+<script src="../../shared/emoji.js"></script>
 <script src="../../shared/app-boot.js"></script>
 <script>
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
+
+  // 新しい世代の絵文字(Unicode 9 以降)を使う場合はここでフォールバックを宣言する。
+  // 絵文字フォントが古い端末(Fire HD 10 など)では値の側(古い世代)に差し替わる。
+  // 例: const EMOJI = KidsEmoji.fix({ '🪷': '🍀' }); → 動的に挿す側は EMOJI['🪷'] を使う
 
   // ---------- 画面切替 ----------
   const screens = {

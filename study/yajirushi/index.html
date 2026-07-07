@@ -226,9 +226,13 @@
 
 <script src="../../shared/sound.js"></script>
 <script src="../../shared/progress.js"></script>
+<script src="../../shared/emoji.js"></script>
 <script src="../../shared/app-boot.js"></script>
 <script>
 (function(){
+  // 絵文字フォントが古い端末(Fire HD 10 など)では 🪨 が出ないので 🌲 に差し替える
+  const EMOJI = KidsEmoji.fix({ '🪨': '🌲' });
+
   const $ = id => document.getElementById(id);
   const stage=$('stage'), board=$('board'), chara=$('chara');
   const progEl=$('prog'), stamp=$('stamp');
@@ -324,7 +328,7 @@
       const d=document.createElement('div');
       d.className='cell'+((x+y)%2?' alt':'');
       if(x===P.start[0]&&y===P.start[1]) d.classList.add('start');
-      if(P.rocks.has(x+','+y)) d.textContent='🪨';
+      if(P.rocks.has(x+','+y)) d.textContent=EMOJI['🪨'];
       if(x===P.goal[0]&&y===P.goal[1]) d.textContent='🥕';
       board.appendChild(d);
     }
