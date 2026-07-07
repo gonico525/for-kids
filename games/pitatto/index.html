@@ -16,12 +16,14 @@
   :root {
     --sky: #BDE8FF;
     --sky-deep: #8FD4FF;
-    --pond: #64B8E8;
-    --pond-deep: #3E97CC;
+    --grass: #8ED772;
+    --grass-deep: #5FB84E;
     --card: #FFFFFF;
     --ink: #3A3A3A;
     --sun: #FFD644;
     --good: #58C471;
+    --rail: #8A8F99;
+    --sleeper: #8B5E3C;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overscroll-behavior: none; }
@@ -53,9 +55,10 @@
     box-shadow: 0 4px 0 rgba(0,0,0,0.08);
   }
   .rule-row {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
     font-size: 30px; padding: 8px; border-radius: 14px; background: #E7F4FB;
   }
+  .rule-row span { white-space: nowrap; }
   .rule-note { font-size: 12px; color: #777; line-height: 1.7; }
   .level-label { font-size: 14px; font-weight: 800; color: #2E7D32; }
   .levels { display: flex; flex-direction: column; gap: 10px; }
@@ -85,33 +88,43 @@
   .tries span.miss { opacity: 1; filter: grayscale(1); }
   #field {
     flex: 1; position: relative; border-radius: 24px; overflow: hidden;
-    background: linear-gradient(180deg, var(--pond) 0%, var(--pond-deep) 100%);
+    background: linear-gradient(180deg, var(--grass) 0%, var(--grass-deep) 100%);
     box-shadow: inset 0 4px 12px rgba(0,0,0,0.12);
   }
-  #lane {
-    position: absolute; left: 6%; right: 6%; top: 50%;
-    height: 14px; margin-top: -7px;
-    background: rgba(255,255,255,0.35); border-radius: 999px;
+  /* 線路: 上下2本のレール + くりかえしの枕木を CSS グラデーションで描く */
+  #track {
+    position: absolute; left: 0; right: 0; top: 50%;
+    height: 26px; margin-top: -13px;
+    background:
+      linear-gradient(180deg,
+        transparent 5px, var(--rail) 5px, var(--rail) 9px,
+        transparent 9px, transparent 17px,
+        var(--rail) 17px, var(--rail) 21px, transparent 21px),
+      repeating-linear-gradient(90deg, var(--sleeper) 0 8px, transparent 8px 26px);
   }
-  #pad {
-    position: absolute; top: 50%; transform: translate(-50%, -50%);
-    font-size: 58px; line-height: 1;
+  #station {
+    position: absolute; top: calc(50% - 62px); transform: translateX(-50%);
+    font-size: 56px; line-height: 1; z-index: 1;
     filter: drop-shadow(0 4px 3px rgba(0,0,0,0.25));
   }
-  #frog {
-    position: absolute; top: calc(50% - 52px); transform: translateX(-50%);
-    font-size: 46px; line-height: 1; z-index: 2;
+  #train {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    font-size: 50px; line-height: 1; z-index: 2;
   }
-  #frog.hop { animation: hop 0.45s ease-out; }
-  @keyframes hop {
-    0% { transform: translateX(-50%) translateY(0); }
-    45% { transform: translateX(-50%) translateY(-34px) scale(1.1); }
-    100% { transform: translateX(-50%) translateY(26px); }
+  #train.stop-bounce { animation: stopBounce 0.45s ease-out; }
+  @keyframes stopBounce {
+    0%   { transform: translate(-50%, -50%); }
+    40%  { transform: translate(-50%, -58%) scale(1.06, 0.94); }
+    70%  { transform: translate(-50%, -46%) scale(0.97, 1.04); }
+    100% { transform: translate(-50%, -50%); }
   }
-  #frog.splash-down { animation: splashdown 0.45s ease-in; }
-  @keyframes splashdown {
-    0% { transform: translateX(-50%) translateY(0) rotate(0); }
-    100% { transform: translateX(-50%) translateY(40px) rotate(24deg); opacity: 0.4; }
+  #train.gatagata { animation: gatagata 0.5s ease-in-out; }
+  @keyframes gatagata {
+    0%, 100% { transform: translate(-50%, -50%); }
+    20% { transform: translate(-54%, -50%) rotate(-6deg); }
+    40% { transform: translate(-46%, -50%) rotate(6deg); }
+    60% { transform: translate(-52%, -50%) rotate(-4deg); }
+    80% { transform: translate(-48%, -50%) rotate(3deg); }
   }
   #judge {
     position: absolute; inset: 0; z-index: 3;
@@ -180,7 +193,7 @@
   .hidden { display: none !important; }
 
   @media (prefers-reduced-motion: reduce) {
-    #frog.hop, #frog.splash-down { animation: none; }
+    #train.stop-bounce, #train.gatagata { animation: none; }
     .cd-num.zoom { animation: none; }
     .moon { animation: none; }
     #judge.show { animation: judgeFade 0.8s forwards; }
@@ -200,8 +213,9 @@
     .tickets-box { font-size: 17px; }
     .sound-toggle, .back-btn { font-size: 34px; }
     .hud .star-count { font-size: 30px; }
-    #pad { font-size: 74px; }
-    #frog { font-size: 58px; top: calc(50% - 64px); }
+    #track { height: 32px; margin-top: -16px; }
+    #station { font-size: 72px; top: calc(50% - 80px); }
+    #train { font-size: 64px; }
     .medal { font-size: 120px; }
     .result-stars { font-size: 56px; }
     .cheer { font-size: 30px; }
@@ -240,8 +254,9 @@
     .level-btn { padding: 10px 16px; font-size: 20px; }
     .hud { padding: 6px 14px; }
     .hud .star-count { font-size: 20px; }
-    #pad { font-size: 48px; }
-    #frog { font-size: 38px; top: calc(50% - 44px); }
+    #track { height: 22px; margin-top: -11px; }
+    #station { font-size: 44px; top: calc(50% - 52px); }
+    #train { font-size: 40px; }
     #tap-hint { font-size: 14px; bottom: 8px; }
     .medal { font-size: 64px; }
     .result-stars { font-size: 34px; }
@@ -267,23 +282,23 @@
     </div>
     <div class="tickets-box">きょうは あと <span class="balloons" id="tickets">🎈🎈🎈</span></div>
     <div class="rule-card">
-      <div class="rule-row"><span>🐸 →→</span><span>🪷</span><span>で 👆ピタッ!</span></div>
+      <div class="rule-row"><span>🚃 →→</span><span>🚉</span><span>で 👆ピタッ!</span></div>
       <div class="rule-note">
-        カエルさんが いったりきたり。<br>
-        はっぱの うえに きたら タッチして とめてあげよう!<br>
+        でんしゃが いったりきたり。<br>
+        えきに ついたら タッチして とめてあげよう!<br>
         まんなかで とめられたら ✨ダブルはなまる✨
       </div>
     </div>
-    <div class="level-label">どれであそぶ?</div>
+    <div class="level-label">どのでんしゃで あそぶ?</div>
     <div class="levels">
       <button class="level-btn" data-level="l1">
-        <span class="stars">⭐</span><span>🐢 ゆっくり</span><span class="lb-best" id="best-l1">⭐0</span>
+        <span class="stars">⭐</span><span>🚂 ゆっくり</span><span class="lb-best" id="best-l1">⭐0</span>
       </button>
       <button class="level-btn" data-level="l2">
-        <span class="stars">⭐⭐</span><span>🐇 はやい</span><span class="lb-best" id="best-l2">⭐0</span>
+        <span class="stars">⭐⭐</span><span>🚃 はやい</span><span class="lb-best" id="best-l2">⭐0</span>
       </button>
       <button class="level-btn" data-level="l3">
-        <span class="stars">⭐⭐⭐</span><span>🐆 すっごくはやい</span><span class="lb-best" id="best-l3">⭐0</span>
+        <span class="stars">⭐⭐⭐</span><span>🚅 すっごくはやい</span><span class="lb-best" id="best-l3">⭐0</span>
       </button>
     </div>
   </section>
@@ -295,11 +310,11 @@
       <div class="tries" id="tries"></div>
     </div>
     <div id="field">
-      <div id="lane"></div>
-      <div id="pad">🪷</div>
-      <div id="frog">🐸</div>
+      <div id="track"></div>
+      <div id="station">🚉</div>
+      <div id="train">🚃</div>
       <div id="judge"></div>
-      <div id="tap-hint">🪷のうえで タッチ!</div>
+      <div id="tap-hint">🚉のまえで タッチ!</div>
       <div class="countdown hidden" id="countdown">
         <div class="cd-num" id="cd-num"></div>
       </div>
@@ -321,7 +336,7 @@
   <!-- おやすみ -->
   <section id="oyasumi" class="screen">
     <div class="moon">🌙</div>
-    <div class="sleepers">🐸💤 🪷💤</div>
+    <div class="sleepers">🚃💤 🚉💤</div>
     <div class="oyasumi-text">きょうのぶんは おしまい!<br>またあしたね</div>
     <button class="icon-btn" id="btn-oyasumi-home">🏠</button>
   </section>
@@ -330,33 +345,29 @@
 
 <script src="../../shared/tickets.js"></script>
 <script src="../../shared/sound.js"></script>
-<script src="../../shared/emoji.js"></script>
 <script src="../../shared/app-boot.js"></script>
 <script>
 (() => {
-  // 絵文字フォントが古い端末(Fire HD 10 など)では 🪷 が出ないので 🍀 に差し替える
-  const EMOJI = KidsEmoji.fix({ '🪷': '🍀' });
-
-  // speed は「レーン幅ぶん / 秒」。padW はレーン幅に対するはっぱの当たり判定の割合。
-  // movePad が true のレベルは1回ごとにはっぱの場所も変わる。
+  // speed は「レーン幅ぶん / 秒」。padW はレーン幅に対するえきの当たり判定の割合。
+  // movePad が true のレベルは1回ごとにえきの場所も変わる。train はそのレベルの車両。
   const LEVELS = {
-    l1: { speed: 0.35, padW: 0.24, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
-    l2: { speed: 0.55, padW: 0.17, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
-    l3: { speed: 0.80, padW: 0.12, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
+    l1: { train: '🚂', speed: 0.35, padW: 0.24, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
+    l2: { train: '🚃', speed: 0.55, padW: 0.17, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
+    l3: { train: '🚅', speed: 0.80, padW: 0.12, tries: 10, movePad: true, medals: [4, 6, 8, 10] },
   };
 
   const $ = id => document.getElementById(id);
   const screens = { start: $('start'), game: $('game'), result: $('result'), oyasumi: $('oyasumi') };
-  const frog = $('frog'), pad = $('pad'), judge = $('judge');
+  const train = $('train'), station = $('station'), judge = $('judge');
 
   let bests = { l1: 0, l2: 0, l3: 0 };
   let state = null;
   let rafId = null;
 
   // ---------- サウンド(shared/sound.js の KidsSound。ON/OFFは全アプリ共通) ----------
-  const sndGood    = () => { KidsSound.tone(660, 0.12, 0.2, 'sine'); KidsSound.tone(990, 0.15, 0.2, 'sine', 0.09); };
+  const sndGood    = () => { KidsSound.tone(660, 0.12, 0.2, 'sine'); KidsSound.tone(990, 0.15, 0.2, 'sine', 0.09); }; // 停車チャイム
   const sndPerfect = () => { [660, 880, 1320].forEach((f, i) => KidsSound.tone(f, 0.14, 0.2, 'sine', i * 0.08)); };
-  const sndSplash  = () => { KidsSound.tone(300, 0.15, 0.14, 'sine'); KidsSound.tone(180, 0.3, 0.12, 'sine', 0.1); };
+  const sndMiss    = () => { KidsSound.tone(150, 0.16, 0.16, 'square'); KidsSound.tone(100, 0.28, 0.12, 'square', 0.12); }; // ガタンガタン
   const sndEnd     = () => { [523, 659, 784, 1047].forEach((f, i) => KidsSound.tone(f, 0.2, 0.2, 'sine', i * 0.15)); };
 
   // ---------- 保存 ----------
@@ -395,8 +406,8 @@
     return {
       levelKey, cfg: LEVELS[levelKey],
       stars: 0, tryNo: 0, results: [],
-      padC: 0.5,           // はっぱの中心(0〜1)
-      pos: 0,              // カエルの位置(0〜1)
+      padC: 0.5,           // えきの中心(0〜1)
+      pos: 0,              // でんしゃの位置(0〜1)
       t0: 0, offset: 0,    // 三角波の基準時刻と位相
       moving: false, done: false,
     };
@@ -408,14 +419,14 @@
     for (let i = 0; i < state.cfg.tries; i++) {
       const s = document.createElement('span');
       const r = state.results[i];
-      s.textContent = r === undefined ? EMOJI['🪷'] : (r ? '⭕' : '💦');
+      s.textContent = r === undefined ? '🚉' : (r ? '⭕' : '💨');
       if (r === true) s.classList.add('hit');
       if (r === false) s.classList.add('miss');
       t.appendChild(s);
     }
   }
-  // 0→1→0 をくりかえす三角波でカエルを往復させる
-  function frogPos(now) {
+  // 0→1→0 をくりかえす三角波ででんしゃを往復させる(折り返し運転)
+  function trainPos(now) {
     const x = ((now - state.t0) / 1000 * state.cfg.speed + state.offset) % 2;
     return x < 1 ? x : 2 - x;
   }
@@ -423,12 +434,11 @@
 
   function newTry() {
     if (state.cfg.movePad || state.tryNo === 0) {
-      // はっぱが端に寄りすぎると簡単になりすぎるので中寄りに置く
+      // えきが端に寄りすぎると簡単になりすぎるので中寄りに置く
       state.padC = 0.2 + Math.random() * 0.6;
     }
-    place(pad, state.padC);
-    frog.classList.remove('hop', 'splash-down');
-    frog.style.top = '';
+    place(station, state.padC);
+    train.classList.remove('stop-bounce', 'gatagata');
     // 毎回ちがう位相・向きで開始(「なんとなく同じリズム」で当たるのを防ぐ)
     state.t0 = performance.now();
     state.offset = Math.random() * 2;
@@ -437,8 +447,8 @@
   }
   function tick() {
     if (!state.moving) return;
-    state.pos = frogPos(performance.now());
-    place(frog, state.pos);
+    state.pos = trainPos(performance.now());
+    place(train, state.pos);
     rafId = requestAnimationFrame(tick);
   }
 
@@ -459,13 +469,13 @@
     state.results[state.tryNo] = hit;
     if (hit) {
       state.stars++;
-      frog.classList.add('hop'); // はっぱの上にぴょん
+      train.classList.add('stop-bounce'); // えきにぴたっと停車
       if (perfect) { showJudge('✨'); sndPerfect(); }
       else { showJudge('⭕'); sndGood(); }
     } else {
-      frog.classList.add('splash-down'); // ぽちゃん
-      showJudge('💦');
-      sndSplash();
+      train.classList.add('gatagata'); // 通りすぎてガタガタ
+      showJudge('💨');
+      sndMiss();
       if (navigator.vibrate) navigator.vibrate(60);
     }
     state.tryNo++;
@@ -501,8 +511,9 @@
   function startRound(levelKey) {
     KidsSound.ensure();
     state = newState(levelKey);
+    train.textContent = state.cfg.train; // レベルごとにちがう車両
     renderHud();
-    place(frog, 0); place(pad, 0.5);
+    place(train, 0); place(station, 0.5);
     show('game');
     runCountdown(() => newTry());
   }
