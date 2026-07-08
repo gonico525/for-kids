@@ -263,6 +263,7 @@
       <div class="rule-note">
         おんがくが なってるあいだは おどろう!<br>
         🗿がでて おんがくが とまったら、うごいちゃダメ!<br>
+        🦩は「かたあしで ピタッ!」など とまりかたにも おだいがでるよ<br>
         ※スマホは さわらず、みるだけで あそべます
       </div>
     </div>
@@ -276,6 +277,9 @@
       </button>
       <button class="level-btn" data-level="m3">
         <span class="stars">⭐⭐⭐</span><span>⚡ はやいおに</span><span></span>
+      </button>
+      <button class="level-btn" data-level="m4">
+        <span class="stars">⭐⭐⭐⭐</span><span>🦩 とまりめいじん</span><span></span>
       </button>
     </div>
   </section>
@@ -324,14 +328,35 @@
 <script>
 (() => {
   // 絵文字フォントが古い端末(Fire HD 10 など)では新しい絵文字を古い世代に差し替える
-  const EMOJI = KidsEmoji.fix({ '🧍': '💂', '🕺': '💃', '🦶': '👣' });
+  const EMOJI = KidsEmoji.fix({ '🧍': '💂', '🕺': '💃', '🦶': '👣', '🦩': '🐓' });
   // dance/freeze はフェーズの長さの範囲(ms)。長さがランダムなのが「いつ止まるか分からない」
   // という抑制の練習のキモなので、固定値にしないこと。
+  // まねっこのお題は幼児期運動指針の「多様な動き」を意識した構成。
+  // 移動系(ぴょんぴょん・のっしのっし・あしぶみ)/バランス系(ぐるぐる・ゆらゆら・ひこうき)/
+  // 調整・伸び(ゆーっくり・ばんざい)。室内前提なので「その場でできる動き」に限定すること。
+  const MANE_MOVES = [
+    ['🐰', 'ぴょんぴょん'],
+    ['🐘', 'のっしのっし'],
+    ['🐢', 'ゆーっくり'],
+    [EMOJI['🦶'], 'あしぶみ'],
+    ['🙌', 'ばんざい'],
+    ['🌀', 'ぐるぐる'],
+    ['🐧', 'よこに ゆらゆら'],
+    ['✈️', 'ひこうき ぶ〜ん'],
+  ];
+  // 「とまりかた」のお題。不安定な姿勢のまま静止する=静的バランスの練習。
+  const POSES = [
+    [EMOJI['🦩'], 'かたあしで ピタッ!'],
+    ['🐸', 'ちいさく ピタッ!'],
+    ['🌻', 'おおきく ピタッ!'],
+    ['🎈', 'つまさきで ピタッ!'],
+  ];
   const LEVELS = {
     m1: { stops: 6, dance: [4000, 7000], freeze: [2000, 3500], noteGap: 240, moves: [['💃','おどろう!']] },
-    m2: { stops: 6, dance: [4000, 7000], freeze: [2000, 3500], noteGap: 240,
-          moves: [['🐰','ぴょんぴょん'],['🐘','のっしのっし'],['🐢','ゆーっくり'],[EMOJI['🦶'],'あしぶみ'],['🙌','ばんざい'],['🌀','ぐるぐる']] },
+    m2: { stops: 6, dance: [4000, 7000], freeze: [2000, 3500], noteGap: 240, moves: MANE_MOVES },
     m3: { stops: 8, dance: [2500, 5000], freeze: [3000, 5000], noteGap: 200, moves: [['💃','おどろう!']] },
+    // とまりめいじん: 毎回とまりかたのお題つき(ふつうの🗿は出ない)。ポーズを保持させるため freeze は長め
+    m4: { stops: 6, dance: [3500, 6000], freeze: [2500, 4500], noteGap: 240, moves: MANE_MOVES, poses: POSES },
   };
   // 明るいループメロディ(ドレミソラのペンタトニック)
   const MELODY = [523, 659, 784, 659, 880, 784, 659, 587];
@@ -342,7 +367,7 @@
   const screens = { start: $('start'), game: $('game'), result: $('result'), oyasumi: $('oyasumi') };
   const stage = $('stage'), prompt = $('prompt'), promptLabel = $('prompt-label');
 
-  let state = null;   // {cfg, stopsDone, lastMove}
+  let state = null;   // {cfg, stopsDone, lastMove, lastPose}
   let roundId = 0;
   let phaseTimer = null;
   let musicTimer = null, noteI = 0;
@@ -413,9 +438,15 @@
     sndStop();
     if (navigator.vibrate) navigator.vibrate(120);
     stage.classList.add('freeze');
-    prompt.textContent = '🗿';
+    // とまりめいじんは毎回「とまりかた」のお題(同じお題は続けない)。それ以外はふつうの🗿
+    let pz = null;
+    if (state.cfg.poses) {
+      do { pz = pick(state.cfg.poses); } while (state.cfg.poses.length > 1 && pz === state.lastPose);
+      state.lastPose = pz;
+    }
+    prompt.textContent = pz ? pz[0] : '🗿';
     prompt.classList.remove('thud'); void prompt.offsetWidth; prompt.classList.add('thud');
-    promptLabel.textContent = 'ピタッ!';
+    promptLabel.textContent = pz ? pz[1] : 'ピタッ!';
     phaseTimer = setTimeout(() => {
       if (myId !== roundId) return;
       state.stopsDone++;
@@ -453,7 +484,7 @@
   function startRound(levelKey) {
     KidsSound.ensure();
     roundId++;
-    state = { levelKey, cfg: LEVELS[levelKey], stopsDone: 0, lastMove: null };
+    state = { levelKey, cfg: LEVELS[levelKey], stopsDone: 0, lastMove: null, lastPose: null };
     renderStops();
     stage.classList.remove('freeze');
     prompt.textContent = '💃';
