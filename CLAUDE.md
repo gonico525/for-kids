@@ -58,6 +58,7 @@ Use the `new-app` skill (`.claude/skills/new-app/SKILL.md`). In short: `python3 
 
 ## Reference docs
 
+- `docs/concept.md` — product concept & design principles (the WHY behind these conventions); consult before adding or changing features.
 - `docs/reference/shared-modules.md` — API of every `shared/` module.
 - `docs/reference/storage-keys.md` — localStorage key registry (update when adding keys).
 - `docs/refactoring-plan.md` — the refactoring plan behind this structure.
