@@ -458,10 +458,27 @@
     judge.classList.add('show');
   }
 
-  function stopNow() {
+  // タッチ検出と画面表示の遅れで、子どもが見ている電車の位置は判定時点より
+  // 100ms 前後古い(Fire HD などのタブレットで顕著)。速いレベルは当たり猶予が
+  // ±75ms しかないため、この遅れだけで「まんなかで押したのに💨」になる。
+  // そこでタップ時刻からさかのぼった範囲でいちばん えきに近かった位置で判定する。
+  const LATENCY_MS = 100;
+
+  function stopNow(ev) {
     if (!state || !state.moving || state.done) return;
     state.moving = false;
     cancelAnimationFrame(rafId);
+    const now = performance.now();
+    let tap = ev && ev.timeStamp;
+    if (!(tap > 0 && tap <= now)) tap = now; // timeStamp が performance.now() 基準でない環境は現在時刻で代用
+    let best = trainPos(tap);
+    const from = Math.max(tap - LATENCY_MS, state.t0);
+    for (let t = tap; t >= from; t -= 8) {
+      const p = trainPos(t);
+      if (Math.abs(p - state.padC) < Math.abs(best - state.padC)) best = p;
+    }
+    state.pos = best;
+    place(train, best); // 見た目も判定に使った位置で止める
     const off = Math.abs(state.pos - state.padC);
     const half = state.cfg.padW / 2;
     const hit = off <= half;
